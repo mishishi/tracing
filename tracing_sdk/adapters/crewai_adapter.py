@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from ..span import Span, SpanKind, SpanStatus
 from ..collector import send
+import re
 
 logger = logging.getLogger("tracing.crewai")
 
@@ -66,7 +67,7 @@ def _patch_crewai():
     def _on_llm_started(source, event):
         _log("LLM_STARTED")
         try:
-            span = Span(kind=SpanKind.LLM_CALL, name="llm_call")
+            span = Span(kind=SpanKind.LLM_CALL, name="思考中...")
             span.metadata["agent"] = _current_agent
             span.metadata["task"] = _current_task
             span.start()
@@ -93,15 +94,30 @@ def _patch_crewai():
             span.metadata["input_tokens"] = usage.get("prompt_tokens", 0)
             span.metadata["output_tokens"] = usage.get("completion_tokens", 0)
             span.metadata["total_tokens"] = usage.get("total_tokens", 0)
-            # Capture response preview
+            # Capture response and extract action summary
             resp = getattr(event, "response", None)
             if resp is not None:
-                span.metadata["response_preview"] = str(resp)
+                resp_str = str(resp)
+                span.metadata["response_preview"] = resp_str
+                # Extract short action summary from response
+                tool_m = re.search(r'(?:write_file|read_file)\s*\(\s*["“]([^")”]+)', resp_str)
+                if tool_m:
+                    action = "写文件" if "write_file" in tool_m.group(0) else "读文件"
+                    span.name = action + " " + tool_m.group(1).split("/")[-1]
+                else:
+                    lines = [l.strip() for l in resp_str.split("\n") if l.strip() and not l.strip().startswith("#") and "```" not in l[:3]]
+                    if lines:
+                        span.name = lines[0][:60]
+                    elif _current_task:
+                        span.name = _current_task[:60]
+                    elif _current_agent:
+                        span.name = _current_agent
             span.finish(SpanStatus.OK)
             send(span)
             _log("LLM_COMPLETED sent tokens=" + str(span.metadata["total_tokens"]))
         except Exception as e:
-            _log("LLM_COMPLETED err: " + str(e))
+            import traceback
+            _log("LLM_COMPLETED err: " + str(e) + "\n" + traceback.format_exc())
 
     @crewai_event_bus.on(LLMCallFailedEvent)
     def _on_llm_failed(source, event):
