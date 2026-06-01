@@ -1,0 +1,2 @@
+[console_scripts]
+trace-server = tracing_server.__main__:main
