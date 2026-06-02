@@ -127,6 +127,8 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
   const prevTraceRef = useRef(0);
+  const lastFingerprintRef = useRef('');
+  const lastStatsRef = useRef('');
   const [newTraceCount, setNewTraceCount] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -140,13 +142,19 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   const fetchData = useCallback(() => {
     fetch(endpoint + '/traces?limit=200').then((r) => r.json()).then((d) => {
       const items: TraceSummary[] = d.traces || [];
+      const fp = items.map(t => t.trace_id).slice(0,5).join(",");
+      if (fp === lastFingerprintRef.current) return;
+      lastFingerprintRef.current = fp;
       if (items.length > prevTraceRef.current && prevTraceRef.current > 0) setNewTraceCount((c) => c + (items.length - prevTraceRef.current));
       prevTraceRef.current = items.length;
       setTraces(items);
       const p = new Set<string>(); items.forEach((t: TraceSummary) => { if (t.project) p.add(t.project); });
       setProjects(Array.from(p).sort());
     }).catch(() => {}).finally(() => setLoadingList(false));
-    fetch(endpoint + '/stats').then((r) => r.json()).then(setStats).catch(() => {});
+    fetch(endpoint + '/stats').then((r) => r.json()).then((s) => {
+        const sf = JSON.stringify(s);
+        if (sf !== lastStatsRef.current) { lastStatsRef.current = sf; setStats(s); }
+      }).catch(() => {});
   }, [endpoint]);
 
   useEffect(() => { fetchData(); }, [endpoint]);
@@ -438,5 +446,6 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
     </div>
   );
 }
+
 
 

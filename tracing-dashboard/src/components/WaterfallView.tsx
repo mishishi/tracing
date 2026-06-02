@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import {
   Layers, Zap, Code2, Wrench, Activity,
   CheckCircle2, AlertCircle, Clock,
@@ -227,7 +227,7 @@ interface WaterfallViewProps {
   onSelectSpan: (id: string) => void;
 }
 
-export function WaterfallView({ trace, selectedSpanId, onSelectSpan }: WaterfallViewProps) {
+export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedSpanId, onSelectSpan }: WaterfallViewProps) {
   const tree = useMemo(() => buildTree(trace.spans), [trace.spans]);
   const flat = useMemo(() => flattenTree(tree), [tree]);
   const maxDepth = useMemo(() => Math.max(...flat.map((n) => n.depth), 0), [flat]);
@@ -278,4 +278,4 @@ export function WaterfallView({ trace, selectedSpanId, onSelectSpan }: Waterfall
       </div>
     </div>
   );
-}
+});
