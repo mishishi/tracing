@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>WebSocket Test</title>
+<style>
+body{font-family:monospace;padding:20px;background:#111;color:#0f0}
+.fail{color:#f44}
+</style></head>
+<body>
+<h2>WebSocket Test: ws://localhost:9200/ws</h2>
+<pre id="log"></pre>
+<script>
+var log = document.getElementById('log');
+function L(s,c){log.innerHTML+=`<span class="${c||''}">${s}</span>\n`}
+L('Connecting...');
+var ws = new WebSocket('ws://localhost:9200/ws');
+ws.onopen = () => L('OPEN - connected!');
+ws.onmessage = (e) => L('MSG: ' + e.data);
+ws.onclose = (e) => L('CLOSE: code='+e.code+' reason='+e.reason);
+ws.onerror = () => L('ERROR','fail');
+</script>
+</body>
+</html>

@@ -148,6 +148,18 @@ h1{{font-size:20px;margin-bottom:4px}}
     return HTMLResponse(html)
 
 
+
+
+# ── Static dashboard hosting ─────────────────────
+
+from fastapi.staticfiles import StaticFiles
+import os as _os
+
+_dashboard_path = _os.path.join(_os.path.dirname(__file__), "..", "tracing-dashboard", "dist")
+if _os.path.isdir(_dashboard_path):
+    app.mount("/dash", StaticFiles(directory=_dashboard_path, html=True), name="dashboard")
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "tracing-server v0.2.0"}
