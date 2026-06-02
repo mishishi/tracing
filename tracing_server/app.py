@@ -31,7 +31,7 @@ async def sse_generator() -> AsyncGenerator[str, None]:
         yield "event: connected\ndata: {}\n\n"
         while True:
             try:
-                data = await asyncio.wait_for(queue.get(), timeout=30)
+                data = await asyncio.wait_for(queue.get(), timeout=10)
                 yield f"event: new_trace\ndata: {data}\n\n"
             except asyncio.TimeoutError:
                 yield ": keepalive\n\n"
@@ -66,6 +66,17 @@ async def broadcast_sse(trace_id: str, session_id: str, project: str):
         except asyncio.QueueFull:
             pass
 
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    """Cancel all SSE connections on shutdown for instant exit."""
+    for q in sse_queues:
+        try:
+            q.put_nowait(None)
+        except Exception:
+            pass
+    sse_queues.clear()
 
 # ── REST ────────────────────────────────────────
 
