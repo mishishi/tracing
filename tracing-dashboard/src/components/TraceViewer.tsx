@@ -164,34 +164,22 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   /* WebSocket real-time updates */
   useEffect(() => {
     const wsUrl = endpoint.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws';
+    let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let cancelled = false;
-    let connecting = false;
+
+    /* Delay initial connection to avoid StrictMode double-mount race */
+    const initTimer = setTimeout(() => {
+      if (cancelled) return;
+      connect();
+    }, 500);
 
     function connect() {
-      if (cancelled || connecting) return;
-      connecting = true;
+      if (cancelled) return;
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
       try {
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
-
-        ws.onopen = () => {
-          connecting = false;
-          if (!cancelled) setWsConnected(true);
-        };
-        ws.onclose = () => {
-          connecting = false;
-          wsRef.current = null;
-          if (!cancelled) {
-            setWsConnected(false);
-            reconnectTimer = setTimeout(connect, 3000);
-          }
-        };
-        ws.onerror = () => {
-          connecting = false;
-          wsRef.current = null;
-          /* Let onclose handle reconnection */
-        };
+        ws = new WebSocket(wsUrl);
+        ws.onopen = () => { if (!cancelled) setWsConnected(true); };
         ws.onmessage = (event) => {
           if (cancelled) return;
           try {
@@ -199,27 +187,30 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
             if (msg.type === 'new_trace') fetchData();
           } catch {}
         };
+        ws.onclose = () => {
+          if (!cancelled) {
+            setWsConnected(false);
+            reconnectTimer = setTimeout(connect, 3000);
+          }
+        };
+        ws.onerror = () => {
+          /* Let onclose handle cleanup */
+        };
       } catch {
-        connecting = false;
         if (!cancelled) reconnectTimer = setTimeout(connect, 3000);
       }
     }
 
-    connect();
-
     return () => {
       cancelled = true;
+      clearTimeout(initTimer);
       clearTimeout(reconnectTimer);
-      const ws = wsRef.current;
-      wsRef.current = null;
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.onclose = null;
-        ws.onerror = null;
         ws.close();
       }
     };
   }, [endpoint, fetchData]);
-
 
   /* Deep link */
   useEffect(() => {
