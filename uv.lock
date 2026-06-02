@@ -334,14 +334,12 @@ source = { editable = "." }
 server = [
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "websockets" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", marker = "extra == 'server'" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'server'" },
-    { name = "websockets", marker = "extra == 'server'" },
 ]
 provides-extras = ["server"]
 
