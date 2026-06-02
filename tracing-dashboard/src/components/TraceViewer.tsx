@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Dropdown } from './Dropdown';
 import { WaterfallView } from './WaterfallView';
+import { SpanDetailPanel } from './SpanDetailPanel';
 
 export interface SpanMeta {
   model?: string; agent?: string; agent_role?: string; task?: string;

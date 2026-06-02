@@ -328,6 +328,26 @@ def get_costs(project: str = "", days: int = 30) -> dict:
         }
 
 
+
+def delete_spans(project: str = "", before_days: int = 0) -> dict:
+    """Batch delete spans. If project is set, delete only that project's spans.
+    If before_days > 0, only delete spans older than that many days."""
+    with _conn() as db:
+        where = "WHERE 1=1"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if before_days > 0:
+            where += " AND start_time < datetime('now', ?)"
+            params.append(f'-{before_days} days')
+
+        count = db.execute(f"SELECT COUNT(*) as c FROM spans {where}", params).fetchone()[0]
+        db.execute(f"DELETE FROM spans {where}", params)
+        db.commit()
+        return {"deleted_spans": count, "project": project or "all", "before_days": before_days}
+
+
 # Initialize DB on import
 init_db()
 

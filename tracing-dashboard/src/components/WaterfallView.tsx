@@ -1,4 +1,5 @@
 import { useMemo, memo, useState, useCallback } from 'react';
+import { Search, Filter } from 'lucide-react';
 import {
   Layers, Zap, Code2, Wrench, Activity,
   CheckCircle2, AlertCircle, Clock,
@@ -245,6 +246,26 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
   const traceDuration = traceEnd - traceStart;  const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState(0);
 
+  /* Span-level filters */
+  const [spanSearch, setSpanSearch] = useState('');
+  const [spanKindFilter, setSpanKindFilter] = useState('all');
+  const [spanStatusFilter, setSpanStatusFilter] = useState('all');
+
+  const filteredFlat = useMemo(() => {
+    let r = flat;
+    if (spanSearch.trim()) {
+      const q = spanSearch.toLowerCase();
+      r = r.filter((n) =>
+        n.span.name.toLowerCase().includes(q) ||
+        (n.span.metadata.model && n.span.metadata.model.toLowerCase().includes(q)) ||
+        (n.span.metadata.agent && n.span.metadata.agent.toLowerCase().includes(q))
+      );
+    }
+    if (spanKindFilter !== 'all') r = r.filter((n) => n.span.kind === spanKindFilter);
+    if (spanStatusFilter !== 'all') r = r.filter((n) => n.span.status === spanStatusFilter);
+    return r;
+  }, [flat, spanSearch, spanKindFilter, spanStatusFilter]);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     setZoom((z) => Math.max(1, Math.min(20, z - e.deltaY * 0.005)));
@@ -282,9 +303,53 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
         <button onClick={() => { setZoom(1); setPan(0); }}
           className="px-1.5 py-0.5 text-[9px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 ml-1">reset</button>
       </div>
+      {/* Span filters */}
+      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 flex-wrap">
+        <div className="relative flex-1 min-w-[140px]">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+          <input
+            type="text"
+            placeholder="搜索 Span..."
+            value={spanSearch}
+            onChange={(e) => setSpanSearch(e.target.value)}
+            className="w-full pl-6 pr-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-500 placeholder-gray-400"
+          />
+          {spanSearch && (
+            <button onClick={() => setSpanSearch('')} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
+              <span className="text-[10px]">✕</span>
+            </button>
+          )}
+        </div>
+        <select
+          value={spanKindFilter}
+          onChange={(e) => setSpanKindFilter(e.target.value)}
+          className="px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 cursor-pointer"
+        >
+          <option value="all">全部类型</option>
+          <option value="flow">流程</option>
+          <option value="agent">智能体</option>
+          <option value="llm_call">LLM</option>
+          <option value="tool_call">工具</option>
+          <option value="phase">阶段</option>
+        </select>
+        <select
+          value={spanStatusFilter}
+          onChange={(e) => setSpanStatusFilter(e.target.value)}
+          className="px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 cursor-pointer"
+        >
+          <option value="all">全部状态</option>
+          <option value="ok">成功</option>
+          <option value="error">失败</option>
+          <option value="running">运行中</option>
+        </select>
+        {filteredFlat.length !== flat.length && (
+          <span className="text-[10px] text-gray-400">{filteredFlat.length}/{flat.length}</span>
+        )}
+      </div>
+
       {/* Span rows */}
       <div className="max-h-[500px] overflow-y-auto" onWheel={handleWheel}>
-        {flat.map((node) => (
+        {filteredFlat.map((node) => (
           <WaterfallRow
             key={node.span.id}
             node={node}

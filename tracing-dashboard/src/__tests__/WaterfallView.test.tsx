@@ -91,8 +91,9 @@ describe('WaterfallView', () => {
 
   it('shows kind label for unnamed spans', () => {
     render(<WaterfallView trace={mockTrace} {...defaultProps} />);
-    // span-4 has no name, should show kind label '阶段'
-    expect(screen.getByText('阶段')).toBeInTheDocument();
+    // '阶段' appears in both dropdown options and span row — check count >= 2
+    const elements = screen.getAllByText('阶段');
+    expect(elements.length).toBeGreaterThanOrEqual(2);
   });
 
   it('shows time axis markers', () => {
