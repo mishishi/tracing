@@ -363,7 +363,7 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
               {paginatedTraces.map((t) => {
                 const isActive = selected?.trace_id === t.trace_id;
                 return (
-                  <button key={t.trace_id} onClick={() => loadTrace(t.trace_id)}
+                  <div key={t.trace_id} onClick={() => loadTrace(t.trace_id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") loadTrace(t.trace_id); }}
                     className={'trace-item w-full text-left group ' + (isActive ? 'active' : '')} aria-current={isActive ? 'true' : undefined}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -379,12 +379,12 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-[10px] text-gray-400">{fmtTime(t.start_time)}</span>
-                        <button onClick={(e) => { e.stopPropagation(); copyTraceId(t.trace_id); }}
-                          className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 rounded transition-opacity" aria-label={'\u590d\u5236 Trace ID'}>
-                          <Copy className="w-3 h-3" /></button>
+                        <span onClick={(e) => { e.stopPropagation(); copyTraceId(t.trace_id); }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 rounded transition-opacity inline-flex cursor-pointer" role="button" tabIndex={0} aria-label={'\u590d\u5236 Trace ID'}>
+                          <Copy className="w-3 h-3" /></span>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
