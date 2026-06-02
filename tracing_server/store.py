@@ -191,6 +191,129 @@ def get_project_list() -> list[str]:
         rows = db.execute("SELECT DISTINCT project FROM spans ORDER BY project").fetchall()
         return [r[0] for r in rows]
 
+
+
+# ── Model pricing (USD per 1M tokens) ──────────
+
+MODEL_PRICING = {
+    "gpt-4":                {"input": 30.00, "output": 60.00},
+    "gpt-4-32k":            {"input": 60.00, "output": 120.00},
+    "gpt-4-turbo":          {"input": 10.00, "output": 30.00},
+    "gpt-4o":               {"input": 2.50,  "output": 10.00},
+    "gpt-4o-mini":          {"input": 0.15,  "output": 0.60},
+    "gpt-4.1":              {"input": 2.00,  "output": 8.00},
+    "gpt-4.1-mini":         {"input": 0.40,  "output": 1.60},
+    "gpt-4.1-nano":         {"input": 0.10,  "output": 0.40},
+    "gpt-3.5-turbo":        {"input": 0.50,  "output": 1.50},
+    "gpt-3.5-turbo-0125":   {"input": 0.50,  "output": 1.50},
+    "gpt-5":                {"input": 1.25,  "output": 10.00},
+    "gpt-5-mini":           {"input": 0.25,  "output": 2.00},
+    "gpt-5-nano":           {"input": 0.05,  "output": 0.20},
+    "claude-3-opus":        {"input": 15.00, "output": 75.00},
+    "claude-3.5-sonnet":    {"input": 3.00,  "output": 15.00},
+    "claude-3.5-haiku":     {"input": 0.80,  "output": 4.00},
+    "claude-4-opus":        {"input": 15.00, "output": 75.00},
+    "claude-4-sonnet":      {"input": 3.00,  "output": 15.00},
+    "gemini-1.5-pro":       {"input": 1.25,  "output": 5.00},
+    "gemini-1.5-flash":     {"input": 0.075, "output": 0.30},
+    "gemini-2.5-pro":       {"input": 1.25,  "output": 10.00},
+    "gemini-2.5-flash":     {"input": 0.15,  "output": 0.60},
+    "deepseek-v3":          {"input": 0.27,  "output": 1.10},
+    "deepseek-r1":          {"input": 0.55,  "output": 2.19},
+}
+
+
+def _match_price(model: str) -> dict:
+    """Match model name to pricing tier. Falls back to gpt-4o pricing."""
+    if not model:
+        return {"input": 2.50, "output": 10.00}
+    m = model.lower().strip()
+    # Exact match
+    if m in MODEL_PRICING:
+        return MODEL_PRICING[m]
+    # Prefix match (e.g. gpt-4-0613 -> gpt-4)
+    for key in sorted(MODEL_PRICING, key=lambda k: -len(k)):
+        if m.startswith(key):
+            return MODEL_PRICING[key]
+    # Unknown model -> gpt-4o default
+    return {"input": 2.50, "output": 10.00}
+
+
+def get_costs(project: str = "", days: int = 30) -> dict:
+    """Aggregate token costs by model, project, and day."""
+    with _conn() as db:
+        db.row_factory = __import__("sqlite3").Row
+
+        where = "WHERE kind='llm_call'"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+
+        rows = db.execute(
+            f"SELECT project, session_id, start_time, metadata FROM spans {where} "
+            f"ORDER BY start_time DESC",
+            params
+        ).fetchall()
+
+        # Aggregates
+        total_cost = 0.0
+        by_model: dict[str, dict] = {}
+        by_project: dict[str, dict] = {}
+        by_day: dict[str, dict] = {}
+
+        for r in rows:
+            meta = json.loads(r["metadata"])
+            model = meta.get("model", "unknown")
+            input_tokens = meta.get("input_tokens", 0) or 0
+            output_tokens = meta.get("output_tokens", 0) or 0
+            proj = r["project"] or "default"
+            day = r["start_time"][:10] if r["start_time"] else "unknown"
+
+            price = _match_price(model)
+            cost = (input_tokens / 1_000_000) * price["input"] + (output_tokens / 1_000_000) * price["output"]
+            total_cost += cost
+
+            # By model
+            if model not in by_model:
+                by_model[model] = {"input_tokens": 0, "output_tokens": 0, "cost": 0.0, "calls": 0}
+            by_model[model]["input_tokens"] += input_tokens
+            by_model[model]["output_tokens"] += output_tokens
+            by_model[model]["cost"] += cost
+            by_model[model]["calls"] += 1
+
+            # By project
+            if proj not in by_project:
+                by_project[proj] = {"input_tokens": 0, "output_tokens": 0, "cost": 0.0, "calls": 0}
+            by_project[proj]["input_tokens"] += input_tokens
+            by_project[proj]["output_tokens"] += output_tokens
+            by_project[proj]["cost"] += cost
+            by_project[proj]["calls"] += 1
+
+            # By day
+            if day not in by_day:
+                by_day[day] = {"input_tokens": 0, "output_tokens": 0, "cost": 0.0, "calls": 0}
+            by_day[day]["input_tokens"] += input_tokens
+            by_day[day]["output_tokens"] += output_tokens
+            by_day[day]["cost"] += cost
+            by_day[day]["calls"] += 1
+
+        # Sort by_day
+        sorted_days = sorted(by_day.items())
+
+        return {
+            "total_cost": round(total_cost, 6),
+            "total_calls": sum(v["calls"] for v in by_model.values()),
+            "currency": "USD",
+            "by_model": {k: {**v, "cost": round(v["cost"], 6)} for k, v in sorted(by_model.items(), key=lambda x: -x[1]["cost"])},
+            "by_project": {k: {**v, "cost": round(v["cost"], 6)} for k, v in sorted(by_project.items(), key=lambda x: -x[1]["cost"])},
+            "by_day": [{"date": k, **{kk: round(vv, 6) if kk == "cost" else vv for kk, vv in v.items()}} for k, v in sorted_days],
+        }
+
+
 # Initialize DB on import
 init_db()
 

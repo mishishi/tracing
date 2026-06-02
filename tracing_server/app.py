@@ -7,7 +7,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list
+from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs
 from .store import get_stats as _get_stats
 
 app = FastAPI(title="Tracing Server", version="0.2.0")
@@ -114,6 +114,15 @@ async def health():
 
 
 
+
+
+
+@app.get("/costs")
+async def costs(
+    project: str = Query(default=""),
+    days: int = Query(default=30, le=365),
+):
+    return get_costs(project=project, days=days)
 
 @app.get("/percentiles")
 async def percentiles(project: str = Query(default="")):

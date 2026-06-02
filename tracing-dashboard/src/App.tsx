@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import {
-  BarChart3, Server, RefreshCw,
+  BarChart3, Server, RefreshCw, DollarSign,
   Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2, Sun, Moon,
 } from 'lucide-react';
 import { TraceViewer } from './components/TraceViewer';
+import { CostView } from './components/CostView';
 
 /* ================================================
    Theme Context
@@ -87,6 +88,7 @@ function AppInner() {
   });
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'traces' | 'costs'>('traces');
   const [healthOk, setHealthOk] = useState<boolean | null>(null);
 
   const [tick, setTick] = useState(0);
@@ -305,7 +307,39 @@ function AppInner() {
 
       {/* ===== Main =============================== */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        <TraceViewer endpoint={endpoint} />
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
+          <button
+            onClick={() => setActiveTab('traces')}
+            className={
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ' +
+              (activeTab === 'traces'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300')
+            }
+          >
+            <BarChart3 className="w-4 h-4" />
+            追踪
+          </button>
+          <button
+            onClick={() => setActiveTab('costs')}
+            className={
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ' +
+              (activeTab === 'costs'
+                ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300')
+            }
+          >
+            <DollarSign className="w-4 h-4" />
+            成本
+          </button>
+        </div>
+
+        {activeTab === 'traces' ? (
+          <TraceViewer endpoint={endpoint} />
+        ) : (
+          <CostView endpoint={endpoint} />
+        )}
       </main>
 
       {/* ===== Footer ============================= */}
