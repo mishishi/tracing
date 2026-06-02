@@ -1,8 +1,11 @@
-"""Tracing server — FastAPI REST API for span ingestion and query."""
+"""Tracing server - FastAPI REST API for span ingestion and query."""
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from .store import insert_spans, get_trace, list_traces, get_stats
+from typing import Set
+import json
+from .store import _insert_spans, get_trace, list_traces
+from .store import get_stats as _get_stats
 
 app = FastAPI(title="Tracing Server", version="0.1.0")
 
@@ -13,17 +16,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# WebSocket clients
+ws_clients: Set[WebSocket] = set()
+
+
+async def broadcast_new_trace(trace_id: str, session_id: str, project: str, span_count: int):
+    msg = json.dumps({
+        "type": "new_trace",
+        "trace_id": trace_id,
+        "session_id": session_id,
+        "project": project,
+        "span_count": span_count,
+    })
+    dead: set[WebSocket] = set()
+    for ws in ws_clients:
+        try:
+            await ws.send_text(msg)
+        except Exception:
+            dead.add(ws)
+    ws_clients -= dead
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    ws_clients.add(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        ws_clients.discard(ws)
+
 
 @app.post("/spans")
 async def ingest_spans(spans: list[dict]):
-    """Ingest a batch of spans from the SDK collector."""
-    insert_spans(spans)
+    _insert_spans(spans)
+    trace_ids: set[str] = set()
+    for s in spans:
+        tid = s.get("trace_id", "")
+        if tid and tid not in trace_ids:
+            trace_ids.add(tid)
+            await broadcast_new_trace(
+                trace_id=tid,
+                session_id=s.get("session_id", ""),
+                project=s.get("project", "default"),
+                span_count=1,
+            )
     return {"ok": True, "count": len(spans)}
 
 
 @app.get("/traces/{trace_id}")
 async def trace_detail(trace_id: str):
-    """Get full trace with all spans."""
     result = get_trace(trace_id)
     if "error" in result:
         from fastapi.responses import JSONResponse
@@ -37,32 +82,27 @@ async def trace_list(
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0),
 ):
-    """List recent traces."""
     return list_traces(project=project, limit=limit, offset=offset)
 
 
 @app.get("/stats")
 async def stats(project: str = Query(default="")):
-    """Aggregated stats across all traces."""
-    return get_stats(project=project)
-
+    return _get_stats(project=project)
 
 
 @app.get("/")
 async def dashboard():
-    """Built-in tracing dashboard."""
     from fastapi.responses import HTMLResponse
-    from .store import get_stats, list_traces
-    stats = get_stats()
-    traces = list_traces(limit=50)
+    stats_data = _get_stats()
+    traces_data = list_traces(limit=50)
 
     rows = ""
-    for t in traces["traces"]:
+    for t in traces_data["traces"]:
         sid = t.get("session_id", t["trace_id"][:12])
         rows += f'<div class="trace"><div><div class="id">{sid}</div><div class="meta">{t["span_count"]} spans</div></div></div>'
 
     if not rows:
-        rows = '<div class="empty">暂无追踪数据</div>'
+        rows = '<div class="empty">{}</div>'.format('暂无追踪数据')
 
     html = f"""<!DOCTYPE html>
 <html lang="zh"><head><meta charset="UTF-8"><title>Tracing</title>
@@ -89,16 +129,17 @@ h1{{font-size:20px;margin-bottom:4px}}
 <h1>Tracing Dashboard</h1>
 <p class="sub">Agent observability</p>
 <div class="cards">
-<div class="card"><div class="l">Spans</div><div class="v">{stats["total_spans"]}</div></div>
-<div class="card"><div class="l">Tokens</div><div class="v tk">{stats["total_tokens"]:,}</div></div>
-<div class="card"><div class="l">LLM</div><div class="v ll">{next((k["c"] for k in stats["by_kind"] if k["kind"]=="llm_call"),0)}</div></div>
-<div class="card"><div class="l">Tool</div><div class="v tl">{next((k["c"] for k in stats["by_kind"] if k["kind"]=="tool_call"),0)}</div></div>
+<div class="card"><div class="l">Spans</div><div class="v">{stats_data["total_spans"]}</div></div>
+<div class="card"><div class="l">Tokens</div><div class="v tk">{stats_data["total_tokens"]:,}</div></div>
+<div class="card"><div class="l">LLM</div><div class="v ll">{next((k["c"] for k in stats_data["by_kind"] if k["kind"]=="llm_call"),0)}</div></div>
+<div class="card"><div class="l">Tool</div><div class="v tl">{next((k["c"] for k in stats_data["by_kind"] if k["kind"]=="tool_call"),0)}</div></div>
 </div>
 <div class="traces"><h2>Recent Traces</h2>{rows}</div>
 <script>setTimeout(()=>location.reload(),5000)</script>
 </body></html>"""
     return HTMLResponse(html)
 
+
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "tracing-server v0.1.0"}
+    return {"status": "ok", "service": "tracing-server v0.2.0"}

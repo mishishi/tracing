@@ -10,10 +10,11 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-server = ["fastapi", "uvicorn"]
+server = ["fastapi", "uvicorn[standard]", "websockets"]
 
 [tool.setuptools.packages.find]
 include = ["tracing_sdk*", "tracing_server*"]
 
 [project.scripts]
 trace-server = "tracing_server.__main__:main"
+

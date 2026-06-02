@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState, useCallback } from 'react';
 import {
   Layers, Zap, Code2, Wrench, Activity,
   CheckCircle2, AlertCircle, Clock,
@@ -185,7 +185,7 @@ function WaterfallRow({
         {[25, 50, 75].map((pct) => (
           <div
             key={pct}
-            className="absolute top-0 bottom-0 w-px bg-gray-100 dark:bg-gray-800"
+            className="absolute top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700"
             style={{ left: pct + '%' }}
           />
         ))}
@@ -242,7 +242,17 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
     return Math.max(...trace.spans.map((s) => new Date(s.end_time || s.start_time).getTime()));
   }, [trace.spans]);
 
-  const traceDuration = traceEnd - traceStart;
+  const traceDuration = traceEnd - traceStart;  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState(0);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    setZoom((z) => Math.max(1, Math.min(20, z - e.deltaY * 0.005)));
+  }, []);
+
+  const visibleStart = traceDuration * (pan / 100);
+  const visibleDuration = traceDuration / zoom;
+
 
   return (
     <div className="overflow-x-auto">
@@ -255,21 +265,31 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
           {[0, 25, 50, 75, 100].map((pct) => (
             <div key={pct} className="absolute top-0" style={{ left: pct + '%' }}>
               <span className="text-[9px] text-gray-400 font-mono -translate-x-1/2 block">
-                {fmtMs(traceDuration * pct / 100)}
+                {fmtMs(visibleStart + visibleDuration * pct / 100)}
               </span>
             </div>
           ))}
         </div>
       </div>
 
+      {/* Zoom controls */}
+      <div className="flex items-center gap-1 px-2 py-1 border-b border-gray-100 dark:border-gray-800">
+        <span className="text-[9px] text-gray-400 mr-1">{zoom.toFixed(1)}x</span>
+        <button onClick={() => setZoom((z) => Math.max(1, z - 1))}
+          className="px-1.5 py-0.5 text-[9px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">-</button>
+        <button onClick={() => setZoom((z) => Math.min(20, z + 1))}
+          className="px-1.5 py-0.5 text-[9px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">+</button>
+        <button onClick={() => { setZoom(1); setPan(0); }}
+          className="px-1.5 py-0.5 text-[9px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 ml-1">reset</button>
+      </div>
       {/* Span rows */}
-      <div className="max-h-[500px] overflow-y-auto">
+      <div className="max-h-[500px] overflow-y-auto" onWheel={handleWheel}>
         {flat.map((node) => (
           <WaterfallRow
             key={node.span.id}
             node={node}
-            traceStart={traceStart}
-            traceDuration={traceDuration}
+            traceStart={traceStart + visibleStart}
+            traceDuration={visibleDuration}
             maxDepth={maxDepth}
             selectedId={selectedSpanId}
             onSelect={onSelectSpan}
@@ -279,3 +299,4 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
     </div>
   );
 });
+

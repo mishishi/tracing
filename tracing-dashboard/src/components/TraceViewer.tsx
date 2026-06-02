@@ -131,6 +131,8 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   const lastStatsRef = useRef('');
   const [newTraceCount, setNewTraceCount] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
 
   const toggle = (id: string) => setExpanded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = () => {
@@ -159,6 +161,53 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
 
   useEffect(() => { fetchData(); }, [endpoint]);
   useEffect(() => { const i = setInterval(fetchData, 5000); return () => clearInterval(i); }, [fetchData]);
+  /* WebSocket real-time updates */
+  useEffect(() => {
+    let wsUrl = endpoint.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws';
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+
+    function connect() {
+      if (cancelled) return;
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => { if (!cancelled) setWsConnected(true); };
+        ws.onclose = () => {
+          if (!cancelled) {
+            setWsConnected(false);
+            reconnectTimer = setTimeout(connect, 3000);
+          }
+        };
+        ws.onerror = () => { ws.close(); };
+        ws.onmessage = (event) => {
+          if (cancelled) return;
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'new_trace') {
+              fetchData();
+            }
+          } catch {}
+        };
+      } catch {
+        if (!cancelled) reconnectTimer = setTimeout(connect, 3000);
+      }
+    }
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(reconnectTimer);
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [endpoint, fetchData]);
+
 
   /* Deep link */
   useEffect(() => {
@@ -397,7 +446,68 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
                   </div>
                 </div>
 
-                {viewMode === 'waterfall' && <WaterfallView trace={selected} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} />}
+                {viewMode === 'waterfall' && (
+                  <>
+                    <WaterfallView trace={selected} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} />
+                    {selectedSpanId && (() => {
+                      const span = selected.spans.find((s) => s.id === selectedSpanId);
+                      if (!span) return null;
+                      return (
+                        <div className="mt-4 p-4 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 animate-fade-in">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400">{kindIcons[span.kind] || kindIcons.phase}</span>
+                              <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
+                                {span.name || kindLabel[span.kind] || span.kind}
+                              </span>
+                              <span className={'kind-badge ' + (span.kind === 'flow' ? 'kind-badge-flow' : span.kind === 'agent' ? 'kind-badge-agent' : span.kind === 'llm_call' ? 'kind-badge-llm' : span.kind === 'tool_call' ? 'kind-badge-tool' : 'kind-badge-phase')}>
+                                {kindLabel[span.kind] || span.kind}
+                              </span>
+                              {statusIcon(span.status)}
+                            </div>
+                            <button onClick={() => setSelectedSpanId(null)} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[12px]">
+                            <div><span className="text-gray-400">耗时</span><p className="font-mono text-gray-700 dark:text-gray-300 mt-0.5">{fmtMs(span.duration_ms)}</p></div>
+                            <div><span className="text-gray-400">开始时间</span><p className="text-gray-700 dark:text-gray-300 mt-0.5">{fmtTime(span.start_time)}</p></div>
+                            {span.metadata.model && <div><span className="text-gray-400">模型</span><p className="font-mono text-gray-700 dark:text-gray-300 mt-0.5">{span.metadata.model}</p></div>}
+                            {span.metadata.agent && <div><span className="text-gray-400">Agent</span><p className="text-gray-700 dark:text-gray-300 mt-0.5 font-medium">{span.metadata.agent}</p></div>}
+                            {span.metadata.agent_role && !span.metadata.agent && <div><span className="text-gray-400">Agent</span><p className="text-gray-700 dark:text-gray-300 mt-0.5">{span.metadata.agent_role}</p></div>}
+                            {span.metadata.task && <div><span className="text-gray-400">Task</span><p className="text-gray-700 dark:text-gray-300 mt-0.5 truncate">{span.metadata.task}</p></div>}
+                            {span.metadata.output_tokens != null && <div><span className="text-gray-400">Token</span><p className="font-mono text-gray-700 dark:text-gray-300 mt-0.5">{'↓'}{span.metadata.input_tokens ?? 0} / {'↑'}{span.metadata.output_tokens}</p></div>}
+                            {span.metadata.tool_name && <div><span className="text-gray-400">工具</span><p className="font-mono text-gray-700 dark:text-gray-300 mt-0.5">{span.metadata.tool_name}</p></div>}
+                          </div>
+
+                          {span.error && <p className="mt-3 text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded p-2">{span.error}</p>}
+
+                          {(span.metadata.prompt_preview || span.metadata.response_preview || span.metadata.tool_input || span.metadata.tool_output) && (
+                            <div className="mt-3 space-y-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+                              {span.metadata.prompt_preview && (
+                                <details><summary className="cursor-pointer text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-medium">{'输入'}</summary>
+                                  <pre className="text-[10px] mt-1 p-2 rounded overflow-auto max-h-40 font-mono leading-relaxed whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">{span.metadata.prompt_preview}</pre></details>
+                              )}
+                              {span.metadata.response_preview && (
+                                <details><summary className="cursor-pointer text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-medium">{'输出'}</summary>
+                                  <pre className="text-[10px] mt-1 p-2 rounded overflow-auto max-h-40 font-mono leading-relaxed whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">{span.metadata.response_preview}</pre></details>
+                              )}
+                              {span.metadata.tool_input && (
+                                <details><summary className="cursor-pointer text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">{'工具输入'}</summary>
+                                  <pre className="text-[10px] mt-1 p-2 rounded overflow-auto max-h-32 font-mono leading-relaxed whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">{span.metadata.tool_input}</pre></details>
+                              )}
+                              {span.metadata.tool_output && (
+                                <details><summary className="cursor-pointer text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">{'工具输出'}</summary>
+                                  <pre className="text-[10px] mt-1 p-2 rounded overflow-auto max-h-32 font-mono leading-relaxed whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">{span.metadata.tool_output}</pre></details>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
 
                 {viewMode === 'list' && (
                   <div className="space-y-1">

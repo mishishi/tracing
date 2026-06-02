@@ -42,7 +42,7 @@ def init_db():
         db.commit()
 
 
-def insert_spans(spans: list[dict]):
+def _insert_spans(spans: list[dict]):
     with _conn() as db:
         db.executemany("""
             INSERT OR REPLACE INTO spans
@@ -136,3 +136,4 @@ def get_stats(project: str = "") -> dict:
 
 # Initialize DB on import
 init_db()
+
