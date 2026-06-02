@@ -94,24 +94,25 @@ def _patch_crewai():
             span.metadata["input_tokens"] = usage.get("prompt_tokens", 0)
             span.metadata["output_tokens"] = usage.get("completion_tokens", 0)
             span.metadata["total_tokens"] = usage.get("total_tokens", 0)
-            # Capture response and extract action summary
             resp = getattr(event, "response", None)
             if resp is not None:
-                resp_str = str(resp)
-                span.metadata["response_preview"] = resp_str
-                # Extract short action summary from response
-                tool_m = re.search(r'(?:write_file|read_file)\s*\(\s*["“]([^")”]+)', resp_str)
+                span.metadata["response_preview"] = str(resp)
+                tool_m = re.search(r"(?:write_file|read_file)\s*\(\s*[""“]([^"")”]+)", str(resp))
                 if tool_m:
                     action = "写文件" if "write_file" in tool_m.group(0) else "读文件"
                     span.name = action + " " + tool_m.group(1).split("/")[-1]
+                elif _current_task:
+                    span.name = _current_task[:50]
+                elif _current_agent:
+                    span.name = _current_agent
+            if not span.name or span.name == "思考中...":
+                fallback = _current_task or _current_agent or ""
+                if fallback:
+                    span.name = fallback[:50]
+                elif "response_preview" in span.metadata:
+                    span.name = span.metadata["response_preview"][:40]
                 else:
-                    lines = [l.strip() for l in resp_str.split("\n") if l.strip() and not l.strip().startswith("#") and "```" not in l[:3]]
-                    if lines:
-                        span.name = lines[0][:60]
-                    elif _current_task:
-                        span.name = _current_task[:60]
-                    elif _current_agent:
-                        span.name = _current_agent
+                    span.name = "llm_call"
             span.finish(SpanStatus.OK)
             send(span)
             _log("LLM_COMPLETED sent tokens=" + str(span.metadata["total_tokens"]))
