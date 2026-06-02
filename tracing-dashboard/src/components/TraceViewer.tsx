@@ -212,7 +212,7 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
       clearTimeout(reconnectTimer);
       const ws = wsRef.current;
       wsRef.current = null;
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
         ws.onclose = null;
         ws.onerror = null;
         ws.close();
