@@ -97,10 +97,17 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
     params.set('days', '30');
 
     fetch(endpoint + '/costs?' + params.toString())
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.ok === false) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
       .then((d) => {
-        setData(d);
-        setError('');
+        if (d && typeof d.total_cost === 'number') {
+          setData(d);
+          setError('');
+        } else {
+          setError('数据格式异常');
+        }
       })
       .catch(() => setError('获取成本数据失败'))
       .finally(() => setLoading(false));
@@ -138,11 +145,11 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
     );
   }
 
-  const models = Object.entries(data.by_model);
-  const projects = Object.entries(data.by_project);
+  const models = Object.entries(data.by_model || {});
+  const projects = Object.entries(data.by_project || {});
   const maxModelCost = Math.max(...models.map(([, v]) => v.cost), 0.001);
   const maxProjectCost = Math.max(...projects.map(([, v]) => v.cost), 0.001);
-  const days = data.by_day;
+  const days = data.by_day || [];
   const maxDayCost = Math.max(...days.map((d) => d.cost), 0.001);
 
   return (

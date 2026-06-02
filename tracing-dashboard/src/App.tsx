@@ -1,4 +1,38 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, Component } from 'react';
+
+/* ================================================
+   Error Boundary
+   ================================================ */
+
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; error: string }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+          <div className="bento text-center py-12 max-w-md">
+            <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">页面出错</h3>
+            <p className="text-sm text-gray-500 mb-4 font-mono">{this.state.error}</p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: '' })}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              重试
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 import {
   BarChart3, Server, RefreshCw, DollarSign,
   Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2, Sun, Moon,
@@ -356,7 +390,7 @@ function AppInner() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppInner />
+      <ErrorBoundary><AppInner /></ErrorBoundary>
     </ThemeProvider>
   );
 }
