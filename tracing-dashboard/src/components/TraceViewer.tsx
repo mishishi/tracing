@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Layers, Zap, Code2, Wrench, Activity,
   CheckCircle2, AlertCircle, Clock, Loader2,
@@ -126,7 +126,7 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   const [timeRange, setTimeRange] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
-  const [prevTraceCount, setPrevTraceCount] = useState(0);
+  const prevTraceRef = useRef(0);
   const [newTraceCount, setNewTraceCount] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -140,14 +140,14 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   const fetchData = useCallback(() => {
     fetch(endpoint + '/traces?limit=200').then((r) => r.json()).then((d) => {
       const items: TraceSummary[] = d.traces || [];
-      if (items.length > prevTraceCount && prevTraceCount > 0) setNewTraceCount((c) => c + (items.length - prevTraceCount));
-      setPrevTraceCount(items.length);
+      if (items.length > prevTraceRef.current && prevTraceRef.current > 0) setNewTraceCount((c) => c + (items.length - prevTraceRef.current));
+      prevTraceRef.current = items.length;
       setTraces(items);
       const p = new Set<string>(); items.forEach((t: TraceSummary) => { if (t.project) p.add(t.project); });
       setProjects(Array.from(p).sort());
     }).catch(() => {}).finally(() => setLoadingList(false));
     fetch(endpoint + '/stats').then((r) => r.json()).then(setStats).catch(() => {});
-  }, [endpoint, prevTraceCount]);
+  }, [endpoint]);
 
   useEffect(() => { fetchData(); }, [endpoint]);
   useEffect(() => { const i = setInterval(fetchData, 5000); return () => clearInterval(i); }, [fetchData]);
@@ -438,3 +438,5 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
     </div>
   );
 }
+
+
