@@ -1,4 +1,5 @@
 pyproject.toml
+tests/test_adapter.py
 tracing_sdk/__init__.py
 tracing_sdk/auto_patch.py
 tracing_sdk/collector.py

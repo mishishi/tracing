@@ -1,4 +1,5 @@
 
 [server]
 fastapi
-uvicorn
+uvicorn[standard]
+websockets

@@ -163,34 +163,44 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   useEffect(() => { const i = setInterval(fetchData, 5000); return () => clearInterval(i); }, [fetchData]);
   /* WebSocket real-time updates */
   useEffect(() => {
-    let wsUrl = endpoint.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws';
+    const wsUrl = endpoint.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws';
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let cancelled = false;
+    let connecting = false;
 
     function connect() {
-      if (cancelled) return;
+      if (cancelled || connecting) return;
+      connecting = true;
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        ws.onopen = () => { if (!cancelled) setWsConnected(true); };
+        ws.onopen = () => {
+          connecting = false;
+          if (!cancelled) setWsConnected(true);
+        };
         ws.onclose = () => {
+          connecting = false;
+          wsRef.current = null;
           if (!cancelled) {
             setWsConnected(false);
             reconnectTimer = setTimeout(connect, 3000);
           }
         };
-        ws.onerror = () => { ws.close(); };
+        ws.onerror = () => {
+          connecting = false;
+          wsRef.current = null;
+          /* Let onclose handle reconnection */
+        };
         ws.onmessage = (event) => {
           if (cancelled) return;
           try {
             const msg = JSON.parse(event.data);
-            if (msg.type === 'new_trace') {
-              fetchData();
-            }
+            if (msg.type === 'new_trace') fetchData();
           } catch {}
         };
       } catch {
+        connecting = false;
         if (!cancelled) reconnectTimer = setTimeout(connect, 3000);
       }
     }
@@ -200,10 +210,12 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
     return () => {
       cancelled = true;
       clearTimeout(reconnectTimer);
-      if (wsRef.current) {
-        wsRef.current.onclose = null;
-        wsRef.current.close();
-        wsRef.current = null;
+      const ws = wsRef.current;
+      wsRef.current = null;
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.close();
       }
     };
   }, [endpoint, fetchData]);

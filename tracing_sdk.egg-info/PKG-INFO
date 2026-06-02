@@ -5,4 +5,5 @@ Summary: Zero-code auto-instrumentation tracing for AI agent frameworks
 Requires-Python: >=3.11
 Provides-Extra: server
 Requires-Dist: fastapi; extra == "server"
-Requires-Dist: uvicorn; extra == "server"
+Requires-Dist: uvicorn[standard]; extra == "server"
+Requires-Dist: websockets; extra == "server"
