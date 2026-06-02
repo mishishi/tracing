@@ -113,16 +113,6 @@ async def health():
     return {"status": "ok", "service": "tracing-server v0.2.0"}
 
 
-# ── Static dashboard ────────────────────────────
-
-from fastapi.staticfiles import StaticFiles
-import os as _os
-
-_dashboard_path = _os.path.join(_os.path.dirname(__file__), "..", "tracing-dashboard", "dist")
-if _os.path.isdir(_dashboard_path):
-    app.mount("/dash", StaticFiles(directory=_dashboard_path, html=True), name="dashboard")
-
-
 # ── Built-in dashboard ──────────────────────────
 
 @app.get("/")
