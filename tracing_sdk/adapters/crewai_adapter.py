@@ -70,6 +70,10 @@ def _patch_crewai():
             span = Span(kind=SpanKind.LLM_CALL, name="思考中...")
             span.metadata["agent"] = _current_agent
             span.metadata["task"] = _current_task
+            # Capture model from event
+            model = getattr(event, "model", None)
+            if model:
+                span.metadata["model"] = str(model)
             span.start()
             # Capture prompt preview from messages
             msgs = getattr(event, "messages", None)
@@ -90,6 +94,11 @@ def _patch_crewai():
             else:
                 span = Span(kind=SpanKind.LLM_CALL, name="llm_call")
                 span.start()
+            # Capture model from event if not already set
+            if "model" not in span.metadata:
+                model = getattr(event, "model", None)
+                if model:
+                    span.metadata["model"] = str(model)
             usage = getattr(event, "usage", None) or {}
             span.metadata["input_tokens"] = usage.get("prompt_tokens", 0)
             span.metadata["output_tokens"] = usage.get("completion_tokens", 0)

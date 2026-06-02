@@ -224,17 +224,31 @@ MODEL_PRICING = {
 
 
 def _match_price(model: str) -> dict:
-    """Match model name to pricing tier. Falls back to gpt-4o pricing."""
+    """Match model name to pricing tier. Handles provider prefixes and versioned names."""
     if not model:
         return {"input": 2.50, "output": 10.00}
     m = model.lower().strip()
-    # Exact match
+    # Strip provider prefix: openai/gpt-4o -> gpt-4o, anthropic/claude-3.5-sonnet -> claude-3.5-sonnet
+    if "/" in m:
+        m = m.split("/")[-1]
+    # Strip date suffix: gpt-4o-2024-05-13 -> gpt-4o
+    # But only for OpenAI models that have known base names
+    # Try exact match first
     if m in MODEL_PRICING:
         return MODEL_PRICING[m]
-    # Prefix match (e.g. gpt-4-0613 -> gpt-4)
+    # Prefix match (longest key first, e.g. gpt-4o-2024-05-13 -> gpt-4o)
     for key in sorted(MODEL_PRICING, key=lambda k: -len(k)):
         if m.startswith(key):
             return MODEL_PRICING[key]
+    # Try matching without version suffix (last -NNNN pattern)
+    import re as _re
+    base = _re.sub(r'-\d{4,}.*$', '', m)
+    if base and base != m:
+        if base in MODEL_PRICING:
+            return MODEL_PRICING[base]
+        for key in sorted(MODEL_PRICING, key=lambda k: -len(k)):
+            if base.startswith(key):
+                return MODEL_PRICING[key]
     # Unknown model -> gpt-4o default
     return {"input": 2.50, "output": 10.00}
 
