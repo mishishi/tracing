@@ -168,15 +168,16 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let cancelled = false;
 
-    /* Delay initial connection to avoid StrictMode double-mount race */
-    const initTimer = setTimeout(() => {
-      if (cancelled) return;
-      connect();
-    }, 500);
-
     function connect() {
       if (cancelled) return;
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      /* Clean up previous instance */
+      if (ws) {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        if (ws.readyState === WebSocket.OPEN) ws.close();
+        ws = null;
+      }
       try {
         ws = new WebSocket(wsUrl);
         ws.onopen = () => { if (!cancelled) setWsConnected(true); };
@@ -190,24 +191,29 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
         ws.onclose = () => {
           if (!cancelled) {
             setWsConnected(false);
+            ws = null;
             reconnectTimer = setTimeout(connect, 3000);
           }
         };
         ws.onerror = () => {
-          /* Let onclose handle cleanup */
+          /* onclose will fire after this */
         };
       } catch {
         if (!cancelled) reconnectTimer = setTimeout(connect, 3000);
       }
     }
 
+    connect();
+
     return () => {
       cancelled = true;
-      clearTimeout(initTimer);
       clearTimeout(reconnectTimer);
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (ws) {
         ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
         ws.close();
+        ws = null;
       }
     };
   }, [endpoint, fetchData]);

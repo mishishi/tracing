@@ -39,15 +39,23 @@ async def broadcast_new_trace(trace_id: str, session_id: str, project: str, span
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
+    import logging
+    log = logging.getLogger("uvicorn")
+    log.info("WebSocket connection attempt from %s", ws.client.host if ws.client else "unknown")
     await ws.accept()
+    log.info("WebSocket accepted")
     ws_clients.add(ws)
+    await ws.send_text(json.dumps({"type": "connected"}))
     try:
         while True:
-            await ws.receive_text()
+            await ws.receive()
     except WebSocketDisconnect:
-        pass
+        log.info("WebSocket client disconnected")
+    except Exception as e:
+        log.error("WebSocket error: %s", e)
     finally:
         ws_clients.discard(ws)
+        log.info("WebSocket client removed, %d remaining", len(ws_clients))
 
 
 @app.post("/spans")
