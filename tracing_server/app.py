@@ -1,13 +1,16 @@
 """Tracing server - FastAPI REST API for span ingestion and query."""
 
-from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Set
 import json
+import asyncio
+from typing import AsyncGenerator
+
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from .store import _insert_spans, get_trace, list_traces
 from .store import get_stats as _get_stats
 
-app = FastAPI(title="Tracing Server", version="0.1.0")
+app = FastAPI(title="Tracing Server", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,47 +19,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# WebSocket clients
-ws_clients: Set[WebSocket] = set()
+# ── SSE ─────────────────────────────────────────
+
+sse_queues: list[asyncio.Queue] = []
 
 
-async def broadcast_new_trace(trace_id: str, session_id: str, project: str, span_count: int):
-    msg = json.dumps({
-        "type": "new_trace",
+async def sse_generator() -> AsyncGenerator[str, None]:
+    queue: asyncio.Queue = asyncio.Queue()
+    sse_queues.append(queue)
+    try:
+        yield "event: connected\ndata: {}\n\n"
+        while True:
+            try:
+                data = await asyncio.wait_for(queue.get(), timeout=30)
+                yield f"event: new_trace\ndata: {data}\n\n"
+            except asyncio.TimeoutError:
+                yield ": keepalive\n\n"
+    except asyncio.CancelledError:
+        pass
+    finally:
+        sse_queues.remove(queue)
+
+
+@app.get("/events")
+async def sse_events():
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+async def broadcast_sse(trace_id: str, session_id: str, project: str):
+    data = json.dumps({
         "trace_id": trace_id,
         "session_id": session_id,
         "project": project,
-        "span_count": span_count,
     })
-    dead: set[WebSocket] = set()
-    for ws in ws_clients:
+    for q in sse_queues:
         try:
-            await ws.send_text(msg)
-        except Exception:
-            dead.add(ws)
-    ws_clients -= dead
+            q.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
 
 
-@app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket):
-    import logging
-    log = logging.getLogger("uvicorn")
-    log.info("WebSocket connection attempt from %s", ws.client.host if ws.client else "unknown")
-    await ws.accept()
-    log.info("WebSocket accepted")
-    ws_clients.add(ws)
-    await ws.send_text(json.dumps({"type": "connected"}))
-    try:
-        while True:
-            await ws.receive()
-    except WebSocketDisconnect:
-        log.info("WebSocket client disconnected")
-    except Exception as e:
-        log.error("WebSocket error: %s", e)
-    finally:
-        ws_clients.discard(ws)
-        log.info("WebSocket client removed, %d remaining", len(ws_clients))
-
+# ── REST ────────────────────────────────────────
 
 @app.post("/spans")
 async def ingest_spans(spans: list[dict]):
@@ -66,11 +77,10 @@ async def ingest_spans(spans: list[dict]):
         tid = s.get("trace_id", "")
         if tid and tid not in trace_ids:
             trace_ids.add(tid)
-            await broadcast_new_trace(
+            await broadcast_sse(
                 trace_id=tid,
                 session_id=s.get("session_id", ""),
                 project=s.get("project", "default"),
-                span_count=1,
             )
     return {"ok": True, "count": len(spans)}
 
@@ -98,6 +108,23 @@ async def stats(project: str = Query(default="")):
     return _get_stats(project=project)
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "tracing-server v0.2.0"}
+
+
+# ── Static dashboard ────────────────────────────
+
+from fastapi.staticfiles import StaticFiles
+import os as _os
+
+_dashboard_path = _os.path.join(_os.path.dirname(__file__), "..", "tracing-dashboard", "dist")
+if _os.path.isdir(_dashboard_path):
+    app.mount("/dash", StaticFiles(directory=_dashboard_path, html=True), name="dashboard")
+
+
+# ── Built-in dashboard ──────────────────────────
+
 @app.get("/")
 async def dashboard():
     from fastapi.responses import HTMLResponse
@@ -110,7 +137,7 @@ async def dashboard():
         rows += f'<div class="trace"><div><div class="id">{sid}</div><div class="meta">{t["span_count"]} spans</div></div></div>'
 
     if not rows:
-        rows = '<div class="empty">{}</div>'.format('暂无追踪数据')
+        rows = '<div class="empty">\u6682\u65e0\u8ffd\u8e2a\u6570\u636e</div>'
 
     html = f"""<!DOCTYPE html>
 <html lang="zh"><head><meta charset="UTF-8"><title>Tracing</title>
@@ -146,20 +173,3 @@ h1{{font-size:20px;margin-bottom:4px}}
 <script>setTimeout(()=>location.reload(),5000)</script>
 </body></html>"""
     return HTMLResponse(html)
-
-
-
-
-# ── Static dashboard hosting ─────────────────────
-
-from fastapi.staticfiles import StaticFiles
-import os as _os
-
-_dashboard_path = _os.path.join(_os.path.dirname(__file__), "..", "tracing-dashboard", "dist")
-if _os.path.isdir(_dashboard_path):
-    app.mount("/dash", StaticFiles(directory=_dashboard_path, html=True), name="dashboard")
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "tracing-server v0.2.0"}

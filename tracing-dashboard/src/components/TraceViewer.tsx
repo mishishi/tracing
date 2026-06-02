@@ -131,8 +131,7 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   const lastStatsRef = useRef('');
   const [newTraceCount, setNewTraceCount] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
+  const [sseConnected, setSseConnected] = useState(false);
 
   const toggle = (id: string) => setExpanded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = () => {
@@ -161,46 +160,29 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
 
   useEffect(() => { fetchData(); }, [endpoint]);
   useEffect(() => { const i = setInterval(fetchData, 5000); return () => clearInterval(i); }, [fetchData]);
-  /* WebSocket real-time updates */
+  /* SSE real-time updates */
   useEffect(() => {
-    const wsUrl = endpoint.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws';
-    let ws: WebSocket | null = null;
+    const eventsUrl = endpoint + '/events';
+    let es: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let cancelled = false;
 
     function connect() {
       if (cancelled) return;
-      /* Clean up previous instance */
-      if (ws) {
-        ws.onclose = null;
-        ws.onerror = null;
-        ws.onmessage = null;
-        if (ws.readyState === WebSocket.OPEN) ws.close();
-        ws = null;
-      }
-      try {
-        ws = new WebSocket(wsUrl);
-        ws.onopen = () => { if (!cancelled) setWsConnected(true); };
-        ws.onmessage = (event) => {
-          if (cancelled) return;
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'new_trace') fetchData();
-          } catch {}
-        };
-        ws.onclose = () => {
-          if (!cancelled) {
-            setWsConnected(false);
-            ws = null;
-            reconnectTimer = setTimeout(connect, 3000);
-          }
-        };
-        ws.onerror = () => {
-          /* onclose will fire after this */
-        };
-      } catch {
-        if (!cancelled) reconnectTimer = setTimeout(connect, 3000);
-      }
+      if (es) { es.close(); es = null; }
+      es = new EventSource(eventsUrl);
+      es.onopen = () => { if (!cancelled) setSseConnected(true); };
+      es.addEventListener('new_trace', () => {
+        if (!cancelled) fetchData();
+      });
+      es.onerror = () => {
+        if (!cancelled) {
+          setSseConnected(false);
+          es?.close();
+          es = null;
+          reconnectTimer = setTimeout(connect, 3000);
+        }
+      };
     }
 
     connect();
@@ -208,13 +190,7 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
     return () => {
       cancelled = true;
       clearTimeout(reconnectTimer);
-      if (ws) {
-        ws.onclose = null;
-        ws.onerror = null;
-        ws.onmessage = null;
-        ws.close();
-        ws = null;
-      }
+      if (es) { es.close(); es = null; }
     };
   }, [endpoint, fetchData]);
 
