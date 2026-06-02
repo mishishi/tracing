@@ -134,6 +134,63 @@ def get_stats(project: str = "") -> dict:
         }
 
 
+
+def cleanup_old_traces(retention_days: int = 30):
+    """Delete traces older than retention_days. Returns count of deleted spans."""
+    with _conn() as db:
+        cursor = db.execute(
+            "SELECT trace_id FROM spans GROUP BY trace_id "
+            "HAVING MAX(start_time) < datetime('now', ?)",
+            (f'-{retention_days} days',)
+        )
+        old_traces = [r[0] for r in cursor.fetchall()]
+        if old_traces:
+            placeholders = ','.join(['?'] * len(old_traces))
+            db.execute(f"DELETE FROM spans WHERE trace_id IN ({placeholders})", old_traces)
+            db.commit()
+            return len(old_traces)
+        return 0
+
+
+def get_percentiles(project: str = "") -> dict:
+    """Get p50, p95, p99 duration percentiles for LLM, tool, and agent calls."""
+    with _conn() as db:
+        db.row_factory = __import__("sqlite3").Row
+        params = (project,) if project else ()
+
+        def _pct(kind_filter: str):
+            rows = db.execute(
+                f"SELECT duration_ms FROM spans WHERE kind=? "
+                f"{'AND project=?' if project else ''} "
+                f"ORDER BY duration_ms",
+                (kind_filter,) + params
+            ).fetchall()
+            if not rows:
+                return {"p50": 0, "p95": 0, "p99": 0, "avg": 0, "count": 0}
+            vals = [r["duration_ms"] for r in rows]
+            vals.sort()
+            n = len(vals)
+            return {
+                "p50": vals[int(n * 0.50)],
+                "p95": vals[min(int(n * 0.95), n - 1)],
+                "p99": vals[min(int(n * 0.99), n - 1)],
+                "avg": round(sum(vals) / n, 1),
+                "count": n,
+            }
+
+        return {
+            "llm_call": _pct("llm_call"),
+            "tool_call": _pct("tool_call"),
+            "agent": _pct("agent"),
+        }
+
+
+def get_project_list() -> list[str]:
+    """Return distinct project names."""
+    with _conn() as db:
+        rows = db.execute("SELECT DISTINCT project FROM spans ORDER BY project").fetchall()
+        return [r[0] for r in rows]
+
 # Initialize DB on import
 init_db()
 

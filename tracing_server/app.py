@@ -7,7 +7,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from .store import _insert_spans, get_trace, list_traces
+from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list
 from .store import get_stats as _get_stats
 
 app = FastAPI(title="Tracing Server", version="0.2.0")
@@ -112,6 +112,23 @@ async def stats(project: str = Query(default="")):
 async def health():
     return {"status": "ok", "service": "tracing-server v0.2.0"}
 
+
+
+
+@app.get("/percentiles")
+async def percentiles(project: str = Query(default="")):
+    return get_percentiles(project=project)
+
+
+@app.get("/projects")
+async def projects():
+    return {"projects": get_project_list()}
+
+
+@app.post("/admin/cleanup")
+async def admin_cleanup(retention_days: int = Query(default=30, le=365)):
+    deleted = cleanup_old_traces(retention_days=retention_days)
+    return {"ok": True, "deleted_traces": deleted, "retention_days": retention_days}
 
 # ── Built-in dashboard ──────────────────────────
 
