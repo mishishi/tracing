@@ -69,7 +69,6 @@ def _ensure_daemon():
     t.start()
 
 
-atexit.register(flush_sync)
 
 
 def set_session(session_id: str, project: str = ""):
@@ -102,3 +101,5 @@ def send(span: Span):
 def flush_sync():
     """Flush all pending spans synchronously. Call on shutdown."""
     _flush()
+    
+atexit.register(flush_sync)

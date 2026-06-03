@@ -25,8 +25,14 @@ _llm_stack: list[Span] = []
 _current_agent: str = ""
 _current_task: str = ""
 
+_patched = False
+
 
 def _patch_crewai():
+    global _patched
+    if _patched:
+        return
+    _patched = True
     _log("adapter: starting patch")
     try:
         from crewai.events.event_bus import crewai_event_bus
@@ -47,21 +53,17 @@ def _patch_crewai():
 
     # Catch-all to discover what events fire
     try:
-        from crewai.events.base_event import BaseEvent
-    except ImportError:
-        try:
-            from crewai.events.types.agent_events import BaseEvent
-        except ImportError:
-            BaseEvent = None
-
-    if BaseEvent:
+        from crewai.events.base_events import BaseEvent
         _all_types = set()
+
         @crewai_event_bus.on(BaseEvent)
         def _catch_all(source, event):
             t = type(event).__name__
             if t not in _all_types:
                 _all_types.add(t)
                 _log("EVENT_DISCOVERED: " + t)
+    except ImportError:
+        pass
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def _on_llm_started(source, event):
@@ -70,12 +72,10 @@ def _patch_crewai():
             span = Span(kind=SpanKind.LLM_CALL, name="思考中...")
             span.metadata["agent"] = _current_agent
             span.metadata["task"] = _current_task
-            # Capture model from event
             model = getattr(event, "model", None)
             if model:
                 span.metadata["model"] = str(model)
             span.start()
-            # Capture prompt preview from messages
             msgs = getattr(event, "messages", None)
             if isinstance(msgs, list) and msgs:
                 span.metadata["prompt_preview"] = str(msgs[-1])
@@ -94,7 +94,6 @@ def _patch_crewai():
             else:
                 span = Span(kind=SpanKind.LLM_CALL, name="llm_call")
                 span.start()
-            # Capture model from event if not already set
             if "model" not in span.metadata:
                 model = getattr(event, "model", None)
                 if model:
@@ -106,7 +105,7 @@ def _patch_crewai():
             resp = getattr(event, "response", None)
             if resp is not None:
                 span.metadata["response_preview"] = str(resp)
-                tool_m = re.search(r"(?:write_file|read_file)\s*\(\s*[""“]([^"")”]+)", str(resp))
+                tool_m = re.search(r"(?:write_file|read_file)\s*\(\s*[""\\u201c]([^"")\\u201d]+)", str(resp))
                 if tool_m:
                     action = "写文件" if "write_file" in tool_m.group(0) else "读文件"
                     span.name = action + " " + tool_m.group(1).split("/")[-1]
@@ -149,7 +148,6 @@ def _patch_crewai():
             span.metadata["agent"] = _current_agent
             span.metadata["task"] = _current_task
             span.metadata["agent_role"] = getattr(event, "agent_role", "") or ""
-            # Capture tool input/output
             args = getattr(event, "tool_args", "")
             if args:
                 span.metadata["tool_input"] = str(args)
