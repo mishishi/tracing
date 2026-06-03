@@ -141,8 +141,16 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
     else { setExpanded(new Set<string>(selected.spans.map((s) => s.id))); setAllExpanded(true); }
   };
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchData = useCallback(() => {
-    fetch(endpoint + '/traces?limit=200').then((r) => r.json()).then((d) => {
+    // Cancel previous in-flight request
+    if (abortRef.current) abortRef.current.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    fetch(endpoint + '/traces?limit=200', { signal: ac.signal }).then((r) => r.json()).then((d) => {
+      if (ac.signal.aborted) return;
       const items: TraceSummary[] = d.traces || [];
       const fp = items.map(t => t.trace_id).slice(0,5).join(",");
       if (fp === lastFingerprintRef.current) return;
@@ -152,11 +160,21 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
       setTraces(items);
       const p = new Set<string>(); items.forEach((t: TraceSummary) => { if (t.project) p.add(t.project); });
       setProjects(Array.from(p).sort());
-    }).catch(() => {}).finally(() => setLoadingList(false));
-    fetch(endpoint + '/stats').then((r) => r.json()).then((s) => {
+    }).catch((err) => { if (err.name !== 'AbortError') console.warn('Fetch traces failed:', err); }).finally(() => {
+      if (!ac.signal.aborted) setLoadingList(false);
+    });
+    fetch(endpoint + '/stats', { signal: ac.signal }).then((r) => r.json()).then((s) => {
+        if (ac.signal.aborted) return;
         const sf = JSON.stringify(s);
         if (sf !== lastStatsRef.current) { lastStatsRef.current = sf; setStats(s); }
-      }).catch(() => {});
+      }).catch((err) => { if (err.name !== 'AbortError') console.warn('Fetch stats failed:', err); });
+  }, [endpoint]);
+
+  // Cleanup on unmount or endpoint change
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
   }, [endpoint]);
 
   useEffect(() => { fetchData(); }, [endpoint]);

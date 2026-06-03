@@ -3,6 +3,7 @@
 import sqlite3
 import json
 import os
+import re
 from pathlib import Path
 
 DB_PATH = Path(os.environ.get("TRACING_DB_PATH", Path.home() / ".tracing" / "traces.db"))
@@ -71,7 +72,10 @@ def get_trace(trace_id: str) -> dict:
         spans = []
         for r in rows:
             d = dict(r)
-            d["metadata"] = json.loads(d.get("metadata", "{}"))
+            try:
+                d["metadata"] = json.loads(d.get("metadata", "{}"))
+            except json.JSONDecodeError:
+                d["metadata"] = {}
             spans.append(d)
 
         return {
@@ -241,8 +245,7 @@ def _match_price(model: str) -> dict:
         if m.startswith(key):
             return MODEL_PRICING[key]
     # Try matching without version suffix (last -NNNN pattern)
-    import re as _re
-    base = _re.sub(r'-\d{4,}.*$', '', m)
+    base = re.sub(r'-\d{4,}.*$', '', m)
     if base and base != m:
         if base in MODEL_PRICING:
             return MODEL_PRICING[base]
@@ -280,7 +283,10 @@ def get_costs(project: str = "", days: int = 30) -> dict:
         by_day: dict[str, dict] = {}
 
         for r in rows:
-            meta = json.loads(r["metadata"])
+            try:
+                meta = json.loads(r["metadata"])
+            except json.JSONDecodeError:
+                meta = {}
             model = meta.get("model", "unknown")
             input_tokens = meta.get("input_tokens", 0) or 0
             output_tokens = meta.get("output_tokens", 0) or 0

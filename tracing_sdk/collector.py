@@ -4,9 +4,14 @@ import json
 import os
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 import urllib.request
 import urllib.error
+import atexit
 from typing import Optional
+import logging
+
+logger = logging.getLogger("tracing.collector")
 from .span import Span, SpanStatus
 
 _ENDPOINT = os.environ.get("TRACING_ENDPOINT", "")
@@ -17,6 +22,7 @@ _SESSION_ID: Optional[str] = None
 _PROJECT: str = os.environ.get("TRACING_PROJECT", "default")
 _ENABLED: bool = bool(_ENDPOINT)
 _daemon_started = False
+_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="tracing-flush")
 
 
 def _flush():
@@ -28,18 +34,23 @@ def _flush():
         batch = _BUFFER[:]
         _BUFFER = []
 
-    try:
-        data = json.dumps(batch).encode("utf-8")
-        req = urllib.request.Request(
-            f"{_ENDPOINT}/spans",
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        # silently drop on network error — don't crash user code
-        pass
+    def _send():
+        try:
+            data = json.dumps(batch).encode("utf-8")
+            req = urllib.request.Request(
+                f"{_ENDPOINT}/spans",
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            urllib.request.urlopen(req, timeout=5)
+        except Exception as e:
+            logger.warning(f"Flush failed ({len(batch)} spans): {e}")
+            # Re-queue data so it's not lost
+            with _LOCK:
+                _BUFFER = batch + _BUFFER
+
+    _executor.submit(_send)
 
 
 def _flush_loop():
@@ -56,6 +67,9 @@ def _ensure_daemon():
     _daemon_started = True
     t = threading.Thread(target=_flush_loop, daemon=True)
     t.start()
+
+
+atexit.register(flush_sync)
 
 
 def set_session(session_id: str, project: str = ""):

@@ -25,7 +25,7 @@ sse_queues: list[asyncio.Queue] = []
 
 
 async def sse_generator() -> AsyncGenerator[str, None]:
-    queue: asyncio.Queue = asyncio.Queue()
+    queue: asyncio.Queue = asyncio.Queue(maxsize=50)
     sse_queues.append(queue)
     try:
         yield "event: connected\ndata: {}\n\n"
