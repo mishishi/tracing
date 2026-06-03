@@ -58,6 +58,7 @@ def _insert_spans(spans: list[dict]):
         """, [{
             **s,
             "metadata": json.dumps(s.get("metadata", {}), ensure_ascii=False),
+            "tags": json.dumps(s.get("tags", {}), ensure_ascii=False),
         } for s in spans])
         db.commit()
 
