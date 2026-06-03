@@ -528,6 +528,64 @@ def cleanup_expired_shares() -> int:
         return cur.rowcount
 
 
+
+
+def get_percentiles_trend(project: str = "", days: int = 30) -> dict:
+    """Get daily P50/P95/P99 trends by kind for the last N days."""
+    import sqlite3
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+
+        where = "WHERE kind IN ('llm_call', 'tool_call', 'agent') AND duration_ms > 0"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+
+        rows = db.execute(
+            f"SELECT kind, DATE(start_time) as day, duration_ms "
+            f"FROM spans {where} ORDER BY kind, day, duration_ms",
+            params
+        ).fetchall()
+
+        # Group by (kind, day) and compute percentiles
+        from collections import defaultdict
+        groups: dict = defaultdict(list)
+        for r in rows:
+            groups[(r["kind"], r["day"])].append(r["duration_ms"])
+
+        # Build result: { kind: [{ day, p50, p95, p99, avg, count }] }
+        from collections import OrderedDict
+        result: dict = {}
+        for kind in ["agent", "llm_call", "tool_call"]:
+            day_data: list = []
+            # Get all unique days for this kind
+            kind_days = sorted(set(k[1] for k in groups if k[0] == kind))
+            for day in kind_days:
+                vals = groups[(kind, day)]
+                vals.sort()
+                n = len(vals)
+                day_data.append({
+                    "day": day,
+                    "p50": vals[int(n * 0.50)],
+                    "p95": vals[min(int(n * 0.95), n - 1)],
+                    "p99": vals[min(int(n * 0.99), n - 1)],
+                    "avg": round(sum(vals) / n, 1),
+                    "count": n,
+                })
+            result[kind] = day_data
+
+        return {
+            "agent": [],
+            "llm_call": [],
+            "tool_call": [],
+            **result,
+        }
+
+
 # Initialize DB on import
 init_db()
 init_shares_table()

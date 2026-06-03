@@ -37,11 +37,11 @@ describe('CostView', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows loading spinner initially', () => {
+  it('shows skeleton placeholder initially', () => {
     render(<CostView endpoint="http://localhost:9200" />);
-    // Should have a loading state
-    const spinner = document.querySelector('.animate-spin');
-    expect(spinner).toBeTruthy();
+    // Should have skeleton loading state
+    const skeleton = document.querySelector('.skeleton');
+    expect(skeleton).toBeTruthy();
   });
 
   it('renders total cost after data loads', async () => {
@@ -61,9 +61,10 @@ describe('CostView', () => {
   it('shows model breakdown', async () => {
     render(<CostView endpoint="http://localhost:9200" />);
     await waitFor(() => {
-      expect(screen.getByText('GPT-4o')).toBeInTheDocument();
-      expect(screen.getByText('GPT-4o Mini')).toBeInTheDocument();
-      expect(screen.getByText('Claude 3.5 Sonnet')).toBeInTheDocument();
+      // Model names appear in both model card and TokenHistogram SVG
+      expect(screen.getAllByText('GPT-4o').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('GPT-4o Mini').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Claude 3.5 Sonnet').length).toBeGreaterThanOrEqual(1);
     });
   });
 

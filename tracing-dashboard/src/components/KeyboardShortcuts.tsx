@@ -11,7 +11,9 @@ const shortcuts: Shortcut[] = [
   { keys: ['1'], label: '切换到追踪标签' },
   { keys: ['2'], label: '切换到成本标签' },
   { keys: ['3'], label: '切换到错误标签' },
+  { keys: ['4'], label: '切换到对比标签' },
   { keys: ['R'], label: '刷新当前数据' },
+  { keys: ['D'], label: '切换紧凑/舒适密度' },
   { keys: ['Esc'], label: '关闭面板/弹窗' },
   { keys: ['Ctrl', 'K'], label: '聚焦搜索框' },
 ];

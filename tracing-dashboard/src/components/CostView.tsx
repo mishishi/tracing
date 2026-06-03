@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Cpu, Layers, BarChart3, Loader2, Bell, BellRing, Settings2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { DollarSign, TrendingUp, Cpu, Layers, BarChart3, Bell, BellRing, Settings2 } from 'lucide-react';
+import { SkeletonStats, SkeletonBlock } from './Skeleton';
+import { TokenHistogram } from './TokenHistogram';
+import { useNotification } from '../hooks/useNotification';
 
 /* ================================================
    Types
@@ -119,16 +122,37 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
       .finally(() => setLoading(false));
   };
 
+  const notify = useNotification();
+  const costNotifiedRef = useRef(0);
+
   useEffect(() => {
     fetchCosts();
     const interval = setInterval(fetchCosts, 30_000);
     return () => clearInterval(interval);
   }, [endpoint, project]);
 
+  // Notify on cost threshold exceeded
+  useEffect(() => {
+    if (!data || threshold <= 0) return;
+    if (data.total_cost >= threshold) {
+      const now = Date.now();
+      if (now - costNotifiedRef.current > 600_000) {
+        costNotifiedRef.current = now;
+        notify(
+          '成本告警',
+          `总成本 $${data.total_cost.toFixed(2)} 已超过阈值 $${threshold.toFixed(2)}（${data.total_calls} 次调用）`,
+          'cost-threshold'
+        );
+      }
+    }
+  }, [data, threshold, notify]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+      <div className="space-y-6">
+        <SkeletonStats />
+        <SkeletonBlock rows={5} />
+        <SkeletonBlock rows={3} />
       </div>
     );
   }
@@ -317,6 +341,9 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
           </div>
         </div>
       )}
+
+      {/* ===== Token Histogram ================= */}
+      {models.length > 0 && <TokenHistogram byModel={data.by_model} />}
 
       {/* ===== Daily Trend ====================== */}
       {days.length > 1 && (

@@ -150,12 +150,12 @@ function WaterfallRow({
         'w-full text-left flex items-center gap-0 transition-colors group ' +
         (selectedId === span.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50')
       }
-      style={{ minHeight: '32px' }}
+      style={{ minHeight: '28px' }}
     >
       {/* Label column */}
-      <div className="w-[220px] shrink-0 flex items-center gap-1.5 py-1.5 pl-2 pr-1">
+      <div className="w-[100px] sm:w-[160px] lg:w-[220px] shrink-0 flex items-center gap-1 py-1.5 pl-1 sm:pl-2 pr-0.5 sm:pr-1">
         {/* Tree lines */}
-        <div style={{ width: indent + 'px', flexShrink: 0 }} className="relative h-full">
+        <div style={{ width: Math.min(indent, 40) + 'px', flexShrink: 0 }} className="relative h-full">
           {depth > 0 && (
             <div
               className="absolute bottom-1/2 left-2 w-px bg-gray-200 dark:bg-gray-700"
@@ -176,7 +176,7 @@ function WaterfallRow({
           )}
         </div>
         <span className="text-gray-400 shrink-0">{kindIcons[span.kind] || kindIcons.phase}</span>
-        <span className="text-[11px] text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">
+        <span className="text-[10px] sm:text-[11px] text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">
           {span.name || kindLabel[span.kind] || span.kind}
         </span>
       </div>
@@ -195,13 +195,13 @@ function WaterfallRow({
         {/* Bar */}
         <div
           className={
-            'absolute top-1/2 -translate-y-1/2 h-5 rounded-sm opacity-80 group-hover:opacity-100 transition-opacity flex items-center px-1.5 min-w-[4px] ' +
+            'absolute top-1/2 -translate-y-1/2 h-4 sm:h-5 rounded-sm opacity-80 group-hover:opacity-100 transition-opacity flex items-center px-1 min-w-[4px] ' +
             (span.status === 'error' ? '!bg-red-400' : (kindColor[span.kind] || 'bg-gray-400'))
           }
           style={{ left: leftPct + '%', width: Math.max(widthPct, 0.4) + '%' }}
         >
           {widthPct > 8 && (
-            <span className="text-[9px] text-white font-medium truncate leading-none mix-blend-difference">
+            <span className="text-[8px] sm:text-[9px] text-white font-medium truncate leading-none mix-blend-difference">
               {fmtMs(span.duration_ms)}
             </span>
           )}
@@ -280,7 +280,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
     <div className="overflow-x-auto">
       {/* Time axis */}
       <div className="flex items-stretch border-b border-gray-100 dark:border-gray-800 mb-1">
-        <div className="w-[220px] shrink-0 py-1 px-2">
+        <div className="w-[100px] sm:w-[160px] lg:w-[220px] shrink-0 py-1 px-1 sm:px-2">
           <span className="text-[10px] text-gray-400 uppercase font-semibold">Span</span>
         </div>
         <div className="flex-1 relative py-1 pr-3">

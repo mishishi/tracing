@@ -1,10 +1,9 @@
 node_modules
 dist
 .git
-__pycache__
-.venv
-*.pyc
+*.md
 .env
-logs
-sessions/*.json
-.DS_Store
+.env.*
+__tests__
+*.test.ts
+*.test.tsx

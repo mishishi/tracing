@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
-import { AlertCircle, AlertTriangle, BarChart3, Loader2, TrendingDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { AlertCircle, AlertTriangle, BarChart3, TrendingDown } from 'lucide-react';
+import { SkeletonStats, SkeletonBlock } from './Skeleton';
+import { useNotification } from '../hooks/useNotification';
 
 interface KindError {
   kind: string;
@@ -58,16 +60,38 @@ export function ErrorPanel({ endpoint, project = '' }: ErrorPanelProps) {
       .finally(() => setLoading(false));
   };
 
+  const notify = useNotification();
+  const lastNotifiedRef = useRef(0);
+
   useEffect(() => {
     fetchErrors();
     const interval = setInterval(fetchErrors, 30_000);
     return () => clearInterval(interval);
   }, [endpoint, project]);
 
+  // Notify on high error rate
+  useEffect(() => {
+    if (!data || data.total_spans === 0) return;
+    if (data.error_rate >= 5) {
+      const now = Date.now();
+      // Only notify once per 10 minutes
+      if (now - lastNotifiedRef.current > 600_000) {
+        lastNotifiedRef.current = now;
+        notify(
+          '错误率告警',
+          `错误率 ${data.error_rate}%，共 ${data.total_errors} 个错误 (${data.total_spans} 次调用)`,
+          'error-rate'
+        );
+      }
+    }
+  }, [data, notify]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+      <div className="space-y-6">
+        <SkeletonStats />
+        <SkeletonBlock rows={4} />
+        <SkeletonBlock rows={3} />
       </div>
     );
   }

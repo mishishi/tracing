@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Clock, Loader2, Zap } from 'lucide-react';
+import { Clock, Zap } from 'lucide-react';
+import { SkeletonHeatmap } from './Skeleton';
 import { Dropdown } from './Dropdown';
 
 interface HeatmapData {
@@ -55,11 +56,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
   }, [endpoint, project, days]);
 
   if (loading) {
-    return (
-      <div className="bento flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
-      </div>
-    );
+    return <SkeletonHeatmap />;
   }
 
   if (!data || data.kinds.length === 0) {
@@ -74,19 +71,35 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
 
   const maxAvg = Math.max(...data.matrix.flat().filter((v) => v > 0), 1);
 
+  const isDark = document.documentElement.classList.contains('dark');
+
   const getHeatColor = (avgMs: number) => {
     if (avgMs === 0) return 'transparent';
     const ratio = Math.min(avgMs / maxAvg, 1);
-    // Green (fast) -> Yellow (medium) -> Red (slow)
-    if (ratio < 0.33) {
-      const g = Math.round(200 + 55 * (ratio / 0.33));
-      return `rgb(220, ${g}, 90)`;
-    } else if (ratio < 0.66) {
-      const r = Math.round(220 + 35 * ((ratio - 0.33) / 0.33));
-      return `rgb(${r}, 180, 60)`;
+    if (isDark) {
+      // Dark mode: more saturated, higher contrast against dark bg
+      if (ratio < 0.33) {
+        const g = Math.round(80 + 120 * (ratio / 0.33));
+        return `rgb(100, ${g}, 30)`;
+      } else if (ratio < 0.66) {
+        const r = Math.round(100 + 120 * ((ratio - 0.33) / 0.33));
+        return `rgb(${r}, 100, 25)`;
+      } else {
+        const g = Math.round(100 - 60 * ((ratio - 0.66) / 0.34));
+        return `rgb(220, ${g}, 20)`;
+      }
     } else {
-      const g = Math.round(180 - 100 * ((ratio - 0.66) / 0.34));
-      return `rgb(245, ${g}, 50)`;
+      // Light mode: softer, more pastel
+      if (ratio < 0.33) {
+        const g = Math.round(200 + 55 * (ratio / 0.33));
+        return `rgb(180, ${g}, 70)`;
+      } else if (ratio < 0.66) {
+        const r = Math.round(180 + 55 * ((ratio - 0.33) / 0.33));
+        return `rgb(${r}, 150, 50)`;
+      } else {
+        const g = Math.round(150 - 90 * ((ratio - 0.66) / 0.34));
+        return `rgb(235, ${g}, 40)`;
+      }
     }
   };
 
@@ -179,9 +192,9 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
           <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
             <span className="text-[9px] text-gray-400">快</span>
             <div className="flex h-3 rounded-full overflow-hidden" style={{ width: 120 }}>
-              <div className="flex-1" style={{ backgroundColor: 'rgb(220, 230, 90)' }} />
-              <div className="flex-1" style={{ backgroundColor: 'rgb(240, 180, 60)' }} />
-              <div className="flex-1" style={{ backgroundColor: 'rgb(245, 80, 50)' }} />
+              <div className="flex-1" style={{ backgroundColor: isDark ? 'rgb(100, 170, 30)' : 'rgb(180, 220, 70)' }} />
+              <div className="flex-1" style={{ backgroundColor: isDark ? 'rgb(180, 120, 25)' : 'rgb(220, 160, 50)' }} />
+              <div className="flex-1" style={{ backgroundColor: isDark ? 'rgb(220, 60, 20)' : 'rgb(235, 70, 40)' }} />
             </div>
             <span className="text-[9px] text-gray-400">慢</span>
             <span className="text-[9px] text-gray-400 ml-auto">

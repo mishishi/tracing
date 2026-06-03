@@ -35,12 +35,14 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 
 import {
   BarChart3, Server, RefreshCw, DollarSign,
-  Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2, Sun, Moon, AlertTriangle, Minimize2, Maximize2, Share2, FileDown,
+  Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2, Sun, Moon, AlertTriangle, Minimize2, Maximize2, Share2, FileDown, Layers,
 } from 'lucide-react';
 import { TraceViewer } from './components/TraceViewer';
 import { CostView } from './components/CostView';
 import { ErrorPanel } from './components/ErrorPanel';
 import { LatencyHeatmap } from './components/LatencyHeatmap';
+import { PercentileTrend } from './components/PercentileTrend';
+import { ComparisonView } from './components/ComparisonView';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
 import { exportToPdf } from './utils/exportPdf';
 
@@ -139,7 +141,7 @@ function AppInner() {
   });
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'traces' | 'costs' | 'errors'>('traces');
+  const [activeTab, setActiveTab] = useState<'traces' | 'costs' | 'errors' | 'compare'>('traces');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sharedTraceId, setSharedTraceId] = useState('');
   const [density, setDensity] = useState<'comfortable' | 'compact'>(() => {
@@ -189,7 +191,9 @@ function AppInner() {
       if (e.key === '1') { setActiveTab('traces'); return; }
       if (e.key === '2') { setActiveTab('costs'); return; }
       if (e.key === '3') { setActiveTab('errors'); return; }
+      if (e.key === '4') { setActiveTab('compare'); return; }
       if (e.key === 'r' || e.key === 'R') { setTick((t) => t + 1); return; }
+      if (e.key === 'd' || e.key === 'D') { setDensity((d) => d === 'compact' ? 'comfortable' : 'compact'); return; }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -248,7 +252,7 @@ function AppInner() {
               <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">
                 追踪面板
               </h1>
-              <p className="text-xs text-gray-500 -mt-0.5">Agent 可观测性平台</p>
+              <p className="hidden sm:block text-xs text-gray-500 -mt-0.5">Agent 可观测性平台</p>
             </div>
           </div>
 
@@ -262,9 +266,9 @@ function AppInner() {
                 color: healthOk === true ? 'var(--success)' : healthOk === false ? 'var(--danger)' : 'var(--text-muted)',
               }}
             >
-              {healthOk === true && <><Wifi className="w-3 h-3" />已连接</>}
-              {healthOk === false && <><WifiOff className="w-3 h-3" />未连接</>}
-              {healthOk === null && <><WifiOff className="w-3 h-3" />检测中</>}
+              {healthOk === true && <><Wifi className="w-3 h-3" /><span className="hidden sm:inline">已连接</span></>}
+              {healthOk === false && <><WifiOff className="w-3 h-3" /><span className="hidden sm:inline">未连接</span></>}
+              {healthOk === null && <><WifiOff className="w-3 h-3" /><span className="hidden sm:inline">检测中</span></>}
             </span>
 
             {/* Refresh */}
@@ -293,7 +297,7 @@ function AppInner() {
             {/* Theme toggle */}
             <button
               onClick={() => exportToPdf('dashboard-main', 'tracing-dashboard-' + new Date().toISOString().slice(0, 10) + '.pdf')}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="hidden sm:block p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               aria-label="导出 PDF"
               title="导出 PDF"
             >
@@ -302,7 +306,7 @@ function AppInner() {
             <button
               onClick={() => setDensity((d) => d === 'compact' ? 'comfortable' : 'compact')}
               className={
-                'p-2 rounded-lg transition-all ' +
+                'hidden sm:block p-2 rounded-lg transition-all ' +
                 (density === 'compact'
                   ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800')
@@ -320,7 +324,7 @@ function AppInner() {
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 ml-1" />
+            <div className="hidden sm:block w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 ml-1" />
           </div>
         </div>
 
@@ -460,16 +464,30 @@ function AppInner() {
             <AlertTriangle className="w-4 h-4" />
             错误
           </button>
+          <button
+            onClick={() => setActiveTab('compare')}
+            className={
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ' +
+              (activeTab === 'compare'
+                ? 'bg-white dark:bg-gray-700 text-violet-600 dark:text-violet-400 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300')
+            }
+          >
+            <Layers className="w-4 h-4" />
+            对比
+          </button>
         </div>
 
         {activeTab === 'traces' && (
           <div className="space-y-6">
             <LatencyHeatmap endpoint={endpoint} />
+            <PercentileTrend endpoint={endpoint} />
             <TraceViewer endpoint={endpoint} initialTraceId={sharedTraceId} />
           </div>
         )}
         {activeTab === 'costs' && <CostView endpoint={endpoint} />}
         {activeTab === 'errors' && <ErrorPanel endpoint={endpoint} />}
+        {activeTab === 'compare' && <ComparisonView endpoint={endpoint} />}
       </main>
 
       <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Layers, Zap, Code2, Wrench, Activity,
-  CheckCircle2, AlertCircle, Clock, Loader2,
+  CheckCircle2, AlertCircle, Clock,
   BarChart3, Search, Server, Filter, X, Inbox,
   Minimize2, Maximize2, RefreshCw, Copy, Download, Share2,
   List, GanttChartSquare, Bell,
@@ -9,6 +9,7 @@ import {
 import { Dropdown } from './Dropdown';
 import { WaterfallView } from './WaterfallView';
 import { SpanDetailPanel } from './SpanDetailPanel';
+import { SkeletonTraceList } from './Skeleton';
 
 export interface SpanMeta {
   model?: string; agent?: string; agent_role?: string; task?: string;
@@ -379,7 +380,7 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
 
       {hasData && (
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
-          <div className="bento max-h-[calc(100vh-300px)] min-h-[300px] overflow-y-auto !p-4">
+          <div className="bento max-h-[calc(100vh-300px)] min-h-[200px] sm:min-h-[300px] overflow-y-auto !p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2"><Server className="w-3.5 h-3.5" />{'\u8ffd\u8e2a\u5217\u8868'}</h3>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">{filteredTraces.length}</span>
@@ -428,8 +429,8 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
             )}
           </div>
 
-          <div className="bento max-h-[calc(100vh-300px)] min-h-[300px] overflow-y-auto !p-4">
-            {loading && <div className="flex flex-col items-center justify-center py-16 gap-3"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /><p className="text-xs text-gray-400">{'\u52a0\u8f7d\u4e2d...'}</p></div>}
+          <div className="bento max-h-[calc(100vh-300px)] min-h-[200px] sm:min-h-[300px] overflow-y-auto !p-4">
+            {loading && <SkeletonTraceList count={6} />}
             {!loading && !selected && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Layers className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />
@@ -482,7 +483,7 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
                       return (
                         <div className="mt-4 p-4 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 animate-fade-in">
                           <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-gray-400">{kindIcons[span.kind] || kindIcons.phase}</span>
                               <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
                                 {span.name || kindLabel[span.kind] || span.kind}

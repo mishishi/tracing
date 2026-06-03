@@ -8,7 +8,7 @@ from fastapi import FastAPI, Query, Body, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs, delete_spans, get_error_stats, get_latency_heatmap, create_share, get_share
+from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs, delete_spans, get_error_stats, get_latency_heatmap, create_share, get_share, get_percentiles_trend
 from .store import get_stats as _get_stats
 
 app = FastAPI(title="Tracing Server", version="0.2.0")
@@ -151,6 +151,13 @@ async def latency_heatmap(
     days: int = Query(default=7, le=90),
 ):
     return get_latency_heatmap(project=project, days=days)
+
+@app.get("/percentiles-trend")
+async def percentiles_trend(
+    project: str = Query(default=""),
+    days: int = Query(default=30, le=90),
+):
+    return get_percentiles_trend(project=project, days=days)
 
 @app.get("/percentiles")
 async def percentiles(project: str = Query(default="")):

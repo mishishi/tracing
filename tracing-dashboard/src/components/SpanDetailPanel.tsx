@@ -1,6 +1,7 @@
 import { X, Copy, CheckCircle2, Zap, Wrench, Cpu, Clock, Layers } from 'lucide-react';
 import { useState } from 'react';
 import type { Span } from './TraceViewer';
+import { JsonBlock } from './JsonBlock';
 
 /* ================================================
    Helpers
@@ -178,20 +179,10 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                 </div>
               )}
               {metadata.tool_input && (
-                <div>
-                  <span className="text-gray-400 block mb-1">输入</span>
-                  <pre className="text-[10px] p-2 bg-white dark:bg-gray-900 rounded border border-gray-100 dark:border-gray-700 max-h-32 overflow-auto whitespace-pre-wrap font-mono">
-                    {metadata.tool_input}
-                  </pre>
-                </div>
+                <JsonBlock label="输入" content={metadata.tool_input} maxHeight={120} />
               )}
               {metadata.tool_output && (
-                <div>
-                  <span className="text-gray-400 block mb-1">输出</span>
-                  <pre className="text-[10px] p-2 bg-white dark:bg-gray-900 rounded border border-gray-100 dark:border-gray-700 max-h-32 overflow-auto whitespace-pre-wrap font-mono">
-                    {metadata.tool_output}
-                  </pre>
-                </div>
+                <JsonBlock label="输出" content={metadata.tool_output} maxHeight={120} />
               )}
             </div>
           </section>
@@ -201,9 +192,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {isLLM && metadata.prompt_preview && (
           <section>
             <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
-            <pre className="text-[10px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg max-h-64 overflow-auto whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
-              {metadata.prompt_preview}
-            </pre>
+            <JsonBlock label="" content={metadata.prompt_preview} maxHeight={200} />
           </section>
         )}
 
@@ -211,9 +200,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {isLLM && metadata.response_preview && (
           <section>
             <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输出 Response</h4>
-            <pre className="text-[10px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg max-h-64 overflow-auto whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
-              {metadata.response_preview}
-            </pre>
+            <JsonBlock label="" content={metadata.response_preview} maxHeight={200} />
           </section>
         )}
 
@@ -230,12 +217,10 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Raw JSON */}
         <section>
           <details>
-            <summary className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600">
+            <summary className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 mb-2">
               <Layers className="w-3 h-3 inline mr-1" />原始 JSON
             </summary>
-            <pre className="text-[10px] mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg max-h-48 overflow-auto font-mono text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700">
-              {JSON.stringify(span, null, 2)}
-            </pre>
+            <JsonBlock label="" content={JSON.stringify(span, null, 2)} maxHeight={300} searchable />
           </details>
         </section>
       </div>

@@ -247,6 +247,21 @@
   border-radius: 4px;
 }
 
+
+/* ── Mobile touch targets ───────────────── */
+@media (max-width: 639px) {
+  button, [role="button"], .trace-item {
+    min-height: 44px;
+  }
+  button.p-1\.5, button.p-2 {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Prevent iOS zoom on input focus */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
