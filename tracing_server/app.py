@@ -4,10 +4,11 @@ import json
 import asyncio
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Body, HTTPException
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs, delete_spans
+from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs, delete_spans, get_error_stats, get_latency_heatmap, create_share, get_share
 from .store import get_stats as _get_stats
 
 app = FastAPI(title="Tracing Server", version="0.2.0")
@@ -135,10 +136,49 @@ async def costs(
 ):
     return get_costs(project=project, days=days)
 
+
+
+@app.get("/errors")
+async def errors(
+    project: str = Query(default=""),
+    days: int = Query(default=30, le=365),
+):
+    return get_error_stats(project=project, days=days)
+
+@app.get("/latency-heatmap")
+async def latency_heatmap(
+    project: str = Query(default=""),
+    days: int = Query(default=7, le=90),
+):
+    return get_latency_heatmap(project=project, days=days)
+
 @app.get("/percentiles")
 async def percentiles(project: str = Query(default="")):
     return get_percentiles(project=project)
 
+
+class ShareRequest(BaseModel):
+    trace_id: str = ""
+    project: str = ""
+    view_state: dict | None = None
+
+@app.post("/share")
+async def create_share_link(body: ShareRequest):
+    share_id = create_share(
+        trace_id=body.trace_id,
+        project=body.project,
+        view_state=body.view_state,
+    )
+    if not share_id:
+        raise HTTPException(status_code=500, detail="Failed to create share")
+    return {"share_id": share_id, "url": f"/s/{share_id}"}
+
+@app.get("/s/{share_id}")
+async def get_share_link(share_id: str):
+    data = get_share(share_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Share not found or expired")
+    return data
 
 @app.get("/projects")
 async def projects():

@@ -1,5 +1,6 @@
 import { useMemo, memo, useState, useCallback } from 'react';
 import { Search, Filter } from 'lucide-react';
+import { Dropdown } from './Dropdown';
 import {
   Layers, Zap, Code2, Wrench, Activity,
   CheckCircle2, AlertCircle, Clock,
@@ -320,28 +321,30 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
             </button>
           )}
         </div>
-        <select
+        <Dropdown
           value={spanKindFilter}
-          onChange={(e) => setSpanKindFilter(e.target.value)}
-          className="px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 cursor-pointer"
-        >
-          <option value="all">全部类型</option>
-          <option value="flow">流程</option>
-          <option value="agent">智能体</option>
-          <option value="llm_call">LLM</option>
-          <option value="tool_call">工具</option>
-          <option value="phase">阶段</option>
-        </select>
-        <select
+          options={[
+            { value: 'all', label: '全部类型' },
+            { value: 'flow', label: '流程' },
+            { value: 'agent', label: '智能体' },
+            { value: 'llm_call', label: 'LLM' },
+            { value: 'tool_call', label: '工具' },
+            { value: 'phase', label: '阶段' },
+          ]}
+          onChange={setSpanKindFilter}
+          className="w-28"
+        />
+        <Dropdown
           value={spanStatusFilter}
-          onChange={(e) => setSpanStatusFilter(e.target.value)}
-          className="px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 cursor-pointer"
-        >
-          <option value="all">全部状态</option>
-          <option value="ok">成功</option>
-          <option value="error">失败</option>
-          <option value="running">运行中</option>
-        </select>
+          options={[
+            { value: 'all', label: '全部状态' },
+            { value: 'ok', label: '成功' },
+            { value: 'error', label: '失败' },
+            { value: 'running', label: '运行中' },
+          ]}
+          onChange={setSpanStatusFilter}
+          className="w-28"
+        />
         {filteredFlat.length !== flat.length && (
           <span className="text-[10px] text-gray-400">{filteredFlat.length}/{flat.length}</span>
         )}

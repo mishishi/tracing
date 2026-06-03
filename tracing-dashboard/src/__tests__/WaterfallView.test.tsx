@@ -91,9 +91,9 @@ describe('WaterfallView', () => {
 
   it('shows kind label for unnamed spans', () => {
     render(<WaterfallView trace={mockTrace} {...defaultProps} />);
-    // '阶段' appears in both dropdown options and span row — check count >= 2
+    // Kind label appears in span row (Dropdown options not in DOM when closed)
     const elements = screen.getAllByText('阶段');
-    expect(elements.length).toBeGreaterThanOrEqual(2);
+    expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows time axis markers', () => {

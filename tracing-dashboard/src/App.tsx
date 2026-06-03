@@ -35,10 +35,14 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 
 import {
   BarChart3, Server, RefreshCw, DollarSign,
-  Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2, Sun, Moon,
+  Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2, Sun, Moon, AlertTriangle, Minimize2, Maximize2, Share2, FileDown,
 } from 'lucide-react';
 import { TraceViewer } from './components/TraceViewer';
 import { CostView } from './components/CostView';
+import { ErrorPanel } from './components/ErrorPanel';
+import { LatencyHeatmap } from './components/LatencyHeatmap';
+import { KeyboardShortcuts } from './components/KeyboardShortcuts';
+import { exportToPdf } from './utils/exportPdf';
 
 /* ================================================
    Theme Context
@@ -69,6 +73,19 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.setItem('tracing-dashboard-theme', theme);
   }, [theme]);
+
+  // Listen for system theme changes when user hasn't set an explicit preference
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      const stored = localStorage.getItem('tracing-dashboard-theme');
+      if (!stored) {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
@@ -122,7 +139,13 @@ function AppInner() {
   });
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'traces' | 'costs'>('traces');
+  const [activeTab, setActiveTab] = useState<'traces' | 'costs' | 'errors'>('traces');
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [sharedTraceId, setSharedTraceId] = useState('');
+  const [density, setDensity] = useState<'comfortable' | 'compact'>(() => {
+    const stored = localStorage.getItem('tracing-dashboard-density');
+    return stored === 'compact' ? 'compact' : 'comfortable';
+  });
   const [healthOk, setHealthOk] = useState<boolean | null>(null);
 
   const [tick, setTick] = useState(0);
@@ -150,6 +173,43 @@ function AppInner() {
       .catch(() => { if (!cancelled) setHealthOk(false); });
     return () => { cancelled = true; };
   }, [endpoint, tick]);
+
+  // Apply density mode
+  useEffect(() => {
+    document.documentElement.dataset.density = density;
+    localStorage.setItem('tracing-dashboard-density', density);
+  }, [density]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === '?') { e.preventDefault(); setShortcutsOpen((prev) => !prev); return; }
+      if (e.key === 'Escape') { setShortcutsOpen(false); setSettingsOpen(false); return; }
+      if (e.key === '1') { setActiveTab('traces'); return; }
+      if (e.key === '2') { setActiveTab('costs'); return; }
+      if (e.key === '3') { setActiveTab('errors'); return; }
+      if (e.key === 'r' || e.key === 'R') { setTick((t) => t + 1); return; }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Load shared trace from URL param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shareId = params.get('share');
+    if (!shareId) return;
+    fetch(endpoint + '/s/' + shareId)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.trace_id) {
+          setActiveTab('traces');
+          setSharedTraceId(data.trace_id);
+        }
+      })
+      .catch(() => {});
+  }, [endpoint]);
 
   const updateEndpoint = useCallback((id: string, field: 'name' | 'url', value: string) => {
     setEndpoints((prev) =>
@@ -231,6 +291,27 @@ function AppInner() {
             </button>
 
             {/* Theme toggle */}
+            <button
+              onClick={() => exportToPdf('dashboard-main', 'tracing-dashboard-' + new Date().toISOString().slice(0, 10) + '.pdf')}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label="导出 PDF"
+              title="导出 PDF"
+            >
+              <FileDown className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setDensity((d) => d === 'compact' ? 'comfortable' : 'compact')}
+              className={
+                'p-2 rounded-lg transition-all ' +
+                (density === 'compact'
+                  ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800')
+              }
+              aria-label={density === 'compact' ? '切换到舒适密度' : '切换到紧凑密度'}
+              title={density === 'compact' ? '舒适密度' : '紧凑密度'}
+            >
+              {density === 'compact' ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
             <button
               onClick={toggleTheme}
               className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
@@ -340,7 +421,7 @@ function AppInner() {
       </header>
 
       {/* ===== Main =============================== */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+      <main id="dashboard-main" className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Tab Navigation */}
         <div className="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
           <button
@@ -367,14 +448,31 @@ function AppInner() {
             <DollarSign className="w-4 h-4" />
             成本
           </button>
+          <button
+            onClick={() => setActiveTab('errors')}
+            className={
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ' +
+              (activeTab === 'errors'
+                ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300')
+            }
+          >
+            <AlertTriangle className="w-4 h-4" />
+            错误
+          </button>
         </div>
 
-        {activeTab === 'traces' ? (
-          <TraceViewer endpoint={endpoint} />
-        ) : (
-          <CostView endpoint={endpoint} />
+        {activeTab === 'traces' && (
+          <div className="space-y-6">
+            <LatencyHeatmap endpoint={endpoint} />
+            <TraceViewer endpoint={endpoint} initialTraceId={sharedTraceId} />
+          </div>
         )}
+        {activeTab === 'costs' && <CostView endpoint={endpoint} />}
+        {activeTab === 'errors' && <ErrorPanel endpoint={endpoint} />}
       </main>
+
+      <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {/* ===== Footer ============================= */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-3 px-4">

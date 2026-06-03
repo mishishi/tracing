@@ -3,7 +3,7 @@ import {
   Layers, Zap, Code2, Wrench, Activity,
   CheckCircle2, AlertCircle, Clock, Loader2,
   BarChart3, Search, Server, Filter, X, Inbox,
-  Minimize2, Maximize2, RefreshCw, Copy, Download,
+  Minimize2, Maximize2, RefreshCw, Copy, Download, Share2,
   List, GanttChartSquare, Bell,
 } from 'lucide-react';
 import { Dropdown } from './Dropdown';
@@ -39,7 +39,7 @@ export interface Stats {
   total_tokens: number; by_kind: { kind: string; c: number; total_ms: number }[];
 }
 
-interface TraceViewerProps { endpoint: string; }
+interface TraceViewerProps { endpoint: string; initialTraceId?: string; }
 
 const kindLabel: Record<string, string> = {
   flow: '\u6d41\u7a0b', agent: '\u667a\u80fd\u4f53', llm_call: 'LLM',
@@ -110,7 +110,7 @@ function StatCard({ icon, label, value, valueClass }: {
 
 const PAGE_SIZE = 50;
 
-export function TraceViewer({ endpoint }: TraceViewerProps) {
+export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [filteredTraces, setFilteredTraces] = useState<TraceSummary[]>([]);
   const [selected, setSelected] = useState<TraceData | null>(null);
@@ -170,14 +170,13 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
       }).catch((err) => { if (err.name !== 'AbortError') console.warn('Fetch stats failed:', err); });
   }, [endpoint]);
 
-  // Cleanup on unmount or endpoint change
-  useEffect(() => {
-    return () => {
-      if (abortRef.current) abortRef.current.abort();
-    };
-  }, [endpoint]);
+  // Cleanup on unmount (not inside fetchData to avoid StrictMode double-cancel)
 
-  useEffect(() => { fetchData(); }, [endpoint]);
+  // Defer first fetch to avoid StrictMode double-mount abort
+  useEffect(() => {
+    const timer = setTimeout(fetchData, 0);
+    return () => clearTimeout(timer);
+  }, [endpoint]);
   useEffect(() => { const i = setInterval(fetchData, 5000); return () => clearInterval(i); }, [fetchData]);
   /* SSE real-time updates */
   useEffect(() => {
@@ -274,6 +273,30 @@ export function TraceViewer({ endpoint }: TraceViewerProps) {
   };
 
   const copyTraceId = (id: string) => { navigator.clipboard.writeText(id).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const [shareUrl, setShareUrl] = useState('');
+  const shareTrace = async () => {
+    if (!selected || shareUrl) { setShareUrl(''); return; }
+    try {
+      const body = JSON.stringify({
+        trace_id: selected.trace_id,
+        project: selected.spans[0]?.project || '',
+        view_state: { selectedSpanId },
+      });
+      const r = await fetch(endpoint + '/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      const d = await r.json();
+      const url = window.location.origin + window.location.pathname + '?share=' + d.share_id;
+      await navigator.clipboard.writeText(url);
+      setShareUrl(url);
+      setTimeout(() => setShareUrl(''), 3000);
+    } catch {
+      // ignore
+    }
+  };
+
   const exportTrace = () => {
     if (!selected) return;
     const b = new Blob([JSON.stringify(selected, null, 2)], { type: 'application/json' });

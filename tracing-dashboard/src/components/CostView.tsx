@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Cpu, Layers, BarChart3, Loader2 } from 'lucide-react';
+import { DollarSign, TrendingUp, Cpu, Layers, BarChart3, Loader2, Bell, BellRing, Settings2 } from 'lucide-react';
 
 /* ================================================
    Types
@@ -90,6 +90,12 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
   const [data, setData] = useState<CostsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [trendMode, setTrendMode] = useState<'cost' | 'tokens'>('cost');
+  const [threshold, setThreshold] = useState<number>(() => {
+    const stored = localStorage.getItem('tracing-dashboard-cost-threshold');
+    return stored ? Number(stored) : 0;
+  });
+  const [showThreshold, setShowThreshold] = useState(false);
 
   const fetchCosts = () => {
     const params = new URLSearchParams();
@@ -151,9 +157,69 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
   const maxProjectCost = Math.max(...projects.map(([, v]) => v.cost), 0.001);
   const days = data.by_day || [];
   const maxDayCost = Math.max(...days.map((d) => d.cost), 0.001);
+  const maxDayTokens = Math.max(...days.map((d) => d.input_tokens + d.output_tokens), 1);
 
   return (
     <div className="space-y-6">
+      {/* ===== Cost Threshold Alert =========== */}
+      {threshold > 0 && data.total_cost >= threshold && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 animate-fade-in">
+          <BellRing className="w-5 h-5 text-red-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+              成本告警
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+              总成本 {fmtCost(data.total_cost)} 已超过设定的阈值 {fmtCost(threshold)}
+            </p>
+          </div>
+          <button
+            onClick={() => setThreshold(0)}
+            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 underline shrink-0"
+          >
+            忽略
+          </button>
+        </div>
+      )}
+
+      {/* ===== Threshold Settings ================ */}
+      {showThreshold && (
+        <div className="bento animate-slide-up">
+          <div className="flex items-center gap-2 mb-3">
+            <Bell className="w-4 h-4 text-gray-400" />
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">成本阈值设置</h4>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-gray-500">超过此金额时提醒（美元）:</label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={threshold || ''}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setThreshold(v);
+                localStorage.setItem('tracing-dashboard-cost-threshold', String(v));
+              }}
+              placeholder="例: 10"
+              className="w-24 px-3 py-1.5 text-sm rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-gray-400"
+            />
+            {threshold > 0 && (
+              <button
+                onClick={() => {
+                  setThreshold(0);
+                  localStorage.removeItem('tracing-dashboard-cost-threshold');
+                }}
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              >
+                清除
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2">设为 0 或留空可关闭告警。设置保存在本地浏览器中。</p>
+        </div>
+      )}
+
       {/* ===== Summary Cards ==================== */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bento">
@@ -255,26 +321,65 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
       {/* ===== Daily Trend ====================== */}
       {days.length > 1 && (
         <div className="bento">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">每日趋势</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-gray-400" />
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">每日趋势</span>
+            </div>
+          <button
+            onClick={() => setShowThreshold(!showThreshold)}
+            className={
+              'p-2 text-sm rounded-lg transition-all ' +
+              (showThreshold
+                ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300')
+            }
+            aria-label="成本阈值设置"
+            title="成本阈值设置"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
+            <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <button
+                onClick={() => setTrendMode('cost')}
+                className={'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' +
+                  (trendMode === 'cost' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+              >
+                费用
+              </button>
+              <button
+                onClick={() => setTrendMode('tokens')}
+                className={'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' +
+                  (trendMode === 'tokens' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+              >
+                Token
+              </button>
+            </div>
           </div>
           <div className="flex items-end gap-1 h-32">
-            {days.map((d) => (
-              <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full group">
-                <span className="text-[9px] text-gray-400 mb-1 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
-                  {fmtCost(d.cost)}
-                </span>
-                <div
-                  className="w-full rounded-t-sm bg-indigo-400 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-400 transition-all min-h-[2px]"
-                  style={{ height: Math.max((d.cost / maxDayCost) * 100, 1) + '%' }}
-                  title={d.date + ': ' + fmtCost(d.cost)}
-                />
-                <span className="text-[8px] text-gray-400 mt-1 truncate w-full text-center">
-                  {d.date.slice(5)}
-                </span>
-              </div>
-            ))}
+            {days.map((d) => {
+              const val = trendMode === 'cost' ? d.cost : (d.input_tokens + d.output_tokens);
+              const maxVal = trendMode === 'cost' ? maxDayCost : maxDayTokens;
+              const displayVal = trendMode === 'cost' ? fmtCost(d.cost) : fmtTokens(d.input_tokens + d.output_tokens);
+              const barColor = trendMode === 'cost'
+                ? 'bg-indigo-400 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-400'
+                : 'bg-emerald-400 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400';
+              return (
+                <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full group">
+                  <span className="text-[9px] text-gray-400 mb-1 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
+                    {displayVal}
+                  </span>
+                  <div
+                    className={'w-full rounded-t-sm transition-all min-h-[2px] ' + barColor}
+                    style={{ height: Math.max((val / maxVal) * 100, 1) + '%' }}
+                    title={d.date + ': ' + displayVal}
+                  />
+                  <span className="text-[8px] text-gray-400 mt-1 truncate w-full text-center">
+                    {d.date.slice(5)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

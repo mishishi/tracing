@@ -161,6 +161,31 @@
   .dark .kind-badge-phase { background: #1e1b4b; color: #a5b4fc; }
 }
 
+
+/* ── Compact Density ─────────────────────── */
+[data-density="compact"] .bento {
+  padding: 14px 18px;
+  border-radius: 14px;
+}
+[data-density="compact"] .stat-card {
+  padding: 10px 14px;
+}
+[data-density="compact"] main {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+[data-density="compact"] header {
+  height: 42px;
+}
+[data-density="compact"] header > div {
+  height: 42px;
+}
+[data-density="compact"] .trace-item {
+  padding: 8px 12px;
+}
+[data-density="compact"] .span-row {
+  padding: 6px 10px;
+}
 @layer utilities {
   @keyframes pulse-ring {
     0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }

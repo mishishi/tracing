@@ -354,6 +354,181 @@ def delete_spans(project: str = "", before_days: int = 0) -> dict:
         return {"deleted_spans": count, "project": project or "all", "before_days": before_days}
 
 
+
+
+def get_error_stats(project: str = "", days: int = 30) -> dict:
+    """Aggregate error rates by project, kind, and agent."""
+    with _conn() as db:
+        db.row_factory = __import__("sqlite3").Row
+
+        where = "WHERE 1=1"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+
+        total = db.execute(f"SELECT COUNT(*) as c FROM spans {where}", params).fetchone()["c"]
+        errors = db.execute(
+            f"SELECT COUNT(*) as c FROM spans {where} AND status='error'", params
+        ).fetchone()["c"]
+
+        by_kind = db.execute(
+            f"SELECT kind, COUNT(*) as total, "
+            f"SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as errors "
+            f"FROM spans {where} GROUP BY kind ORDER BY errors DESC",
+            params
+        ).fetchall()
+
+        by_project = db.execute(
+            f"SELECT project, COUNT(*) as total, "
+            f"SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as errors "
+            f"FROM spans {where} GROUP BY project ORDER BY errors DESC",
+            params
+        ).fetchall()
+
+        # Get recent error details (last 20)
+        recent = db.execute(
+            f"SELECT id, name, kind, project, error, start_time "
+            f"FROM spans {where} AND status='error' "
+            f"ORDER BY start_time DESC LIMIT 20",
+            params
+        ).fetchall()
+
+        return {
+            "total_spans": total,
+            "total_errors": errors,
+            "error_rate": round(errors / total * 100, 2) if total > 0 else 0,
+            "by_kind": [{"kind": r["kind"], "total": r["total"], "errors": r["errors"],
+                          "rate": round(r["errors"] / r["total"] * 100, 2) if r["total"] > 0 else 0}
+                         for r in by_kind],
+            "by_project": [{"project": r["project"], "total": r["total"], "errors": r["errors"],
+                             "rate": round(r["errors"] / r["total"] * 100, 2) if r["total"] > 0 else 0}
+                            for r in by_project],
+            "recent_errors": [dict(r) for r in recent],
+        }
+
+
+
+def get_latency_heatmap(project: str = "", days: int = 7) -> dict:
+    """Aggregate average latency by kind and hour of day."""
+    import sqlite3
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+
+        where = "WHERE duration_ms > 0"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+
+        rows = db.execute(
+            f"SELECT kind, CAST(strftime('%H', start_time) AS INTEGER) as hour, "
+            f"AVG(duration_ms) as avg_ms, COUNT(*) as cnt "
+            f"FROM spans {where} "
+            f"GROUP BY kind, hour ORDER BY kind, hour",
+            params
+        ).fetchall()
+
+        # Build matrix
+        kinds = []
+        kind_index: dict = {}
+        for row in rows:
+            k = row["kind"]
+            if k not in kind_index:
+                kind_index[k] = len(kinds)
+                kinds.append(k)
+
+        hours = list(range(24))
+        matrix = [[0.0] * 24 for _ in range(len(kinds))]
+        counts = [[0] * 24 for _ in range(len(kinds))]
+
+        for row in rows:
+            ki = kind_index[row["kind"]]
+            h = row["hour"]
+            matrix[ki][h] = round(row["avg_ms"], 1)
+            counts[ki][h] = row["cnt"]
+
+        return {
+            "hours": hours,
+            "kinds": kinds,
+            "matrix": matrix,
+            "counts": counts,
+        }
+
+
+
+def init_shares_table():
+    """Create shares table if not exists."""
+    with _conn() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS shares (
+                share_id TEXT PRIMARY KEY,
+                trace_id TEXT DEFAULT '',
+                project TEXT DEFAULT '',
+                view_state TEXT DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                expires_at TEXT NOT NULL DEFAULT (datetime('now', '+30 days'))
+            )
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_share_id ON shares(share_id)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_share_expires ON shares(expires_at)")
+
+
+def create_share(trace_id: str = "", project: str = "", view_state: dict | None = None) -> str | None:
+    """Create a share link and return the share_id."""
+    import secrets, json
+    share_id = secrets.token_hex(4)
+    state_json = json.dumps(view_state or {}, ensure_ascii=False)
+    with _conn() as db:
+        db.execute(
+            "INSERT INTO shares (share_id, trace_id, project, view_state) VALUES (?, ?, ?, ?)",
+            (share_id, trace_id, project, state_json)
+        )
+        db.commit()
+    return share_id
+
+
+def get_share(share_id: str) -> dict | None:
+    """Get share data by share_id."""
+    import json
+    with _conn() as db:
+        db.row_factory = __import__("sqlite3").Row
+        row = db.execute(
+            "SELECT * FROM shares WHERE share_id = ? AND expires_at > datetime('now')",
+            (share_id,)
+        ).fetchone()
+        if not row:
+            return None
+        view_state = {}
+        try:
+            view_state = json.loads(row["view_state"])
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return {
+            "share_id": row["share_id"],
+            "trace_id": row["trace_id"],
+            "project": row["project"],
+            "view_state": view_state,
+            "created_at": row["created_at"],
+            "expires_at": row["expires_at"],
+        }
+
+
+def cleanup_expired_shares() -> int:
+    """Remove expired shares, return count deleted."""
+    with _conn() as db:
+        cur = db.execute("DELETE FROM shares WHERE expires_at < datetime('now')")
+        db.commit()
+        return cur.rowcount
+
+
 # Initialize DB on import
 init_db()
+init_shares_table()
 
