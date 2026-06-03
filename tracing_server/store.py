@@ -40,6 +40,10 @@ def init_db():
         db.execute("CREATE INDEX IF NOT EXISTS idx_session_id ON spans(session_id)")
         db.execute("CREATE INDEX IF NOT EXISTS idx_start_time ON spans(start_time)")
         db.execute("CREATE INDEX IF NOT EXISTS idx_kind ON spans(kind)")
+        try:
+            db.execute("ALTER TABLE spans ADD COLUMN tags TEXT DEFAULT '{}'")
+        except Exception:
+            pass
         db.commit()
 
 
@@ -48,9 +52,9 @@ def _insert_spans(spans: list[dict]):
         db.executemany("""
             INSERT OR REPLACE INTO spans
             (id, trace_id, parent_id, session_id, project, name, kind, status,
-             start_time, end_time, duration_ms, metadata, error)
+             start_time, end_time, duration_ms, metadata, error, tags)
             VALUES (:id, :trace_id, :parent_id, :session_id, :project, :name, :kind, :status,
-                    :start_time, :end_time, :duration_ms, :metadata, :error)
+                    :start_time, :end_time, :duration_ms, :metadata, :error, :tags)
         """, [{
             **s,
             "metadata": json.dumps(s.get("metadata", {}), ensure_ascii=False),
@@ -584,6 +588,45 @@ def get_percentiles_trend(project: str = "", days: int = 30) -> dict:
             "tool_call": [],
             **result,
         }
+
+
+
+
+def search_spans(query: str, project: str = "", limit: int = 50) -> list[dict]:
+    """Full-text search across span name, error, metadata, and tags."""
+    import sqlite3
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        like = f"%{query}%"
+        where = "WHERE (name LIKE ? OR error LIKE ? OR metadata LIKE ? OR tags LIKE ?)"
+        params = [like, like, like, like]
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        rows = db.execute(
+            f"SELECT id, trace_id, name, kind, status, project, error, start_time, tags "
+            f"FROM spans {where} ORDER BY start_time DESC LIMIT ?",
+            params + [limit]
+        ).fetchall()
+        results = []
+        for r in rows:
+            tags = {}
+            try:
+                tags = json.loads(r["tags"] or "{}")
+            except Exception:
+                pass
+            results.append({
+                "id": r["id"],
+                "trace_id": r["trace_id"],
+                "name": r["name"],
+                "kind": r["kind"],
+                "status": r["status"],
+                "project": r["project"],
+                "error": r["error"],
+                "start_time": r["start_time"],
+                "tags": tags,
+            })
+        return results
 
 
 # Initialize DB on import

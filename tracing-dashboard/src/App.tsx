@@ -43,6 +43,7 @@ import { ErrorPanel } from './components/ErrorPanel';
 import { LatencyHeatmap } from './components/LatencyHeatmap';
 import { PercentileTrend } from './components/PercentileTrend';
 import { ComparisonView } from './components/ComparisonView';
+import { SearchBar } from './components/SearchBar';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
 import { exportToPdf } from './utils/exportPdf';
 
@@ -256,7 +257,10 @@ function AppInner() {
             </div>
           </div>
 
-          {/* Right actions */}
+          {/* Global Search */}
+          <SearchBar endpoint={endpoint} onSelectTrace={(traceId) => { setActiveTab('traces'); setSharedTraceId(traceId); }} />
+
+        {/* Right actions */}
           <div className="flex items-center gap-1">
             {/* Health */}
             <span

@@ -30,6 +30,7 @@ class Span:
     duration_ms: float = 0
     metadata: dict = field(default_factory=dict)
     error: str = ""
+    tags: dict = field(default_factory=dict)  # user-defined key-value tags
     session_id: str = ""     # business-level session id
     project: str = ""        # to distinguish multiple apps
 

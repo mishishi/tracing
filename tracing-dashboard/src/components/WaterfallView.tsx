@@ -251,6 +251,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
   const [spanSearch, setSpanSearch] = useState('');
   const [spanKindFilter, setSpanKindFilter] = useState('all');
   const [spanStatusFilter, setSpanStatusFilter] = useState('all');
+  const [spanTagFilter, setSpanTagFilter] = useState('');
 
   const filteredFlat = useMemo(() => {
     let r = flat;
@@ -264,8 +265,18 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
     }
     if (spanKindFilter !== 'all') r = r.filter((n) => n.span.kind === spanKindFilter);
     if (spanStatusFilter !== 'all') r = r.filter((n) => n.span.status === spanStatusFilter);
+    if (spanTagFilter.trim()) {
+      const parts = spanTagFilter.split(':').map((s) => s.trim());
+      const tagKey = parts[0].toLowerCase();
+      const tagVal = parts[1]?.toLowerCase() || '';
+      r = r.filter((n) => {
+        const tags = n.span.metadata?.tags || {};
+        if (tagVal) return String(tags[tagKey] || '').toLowerCase().includes(tagVal);
+        return tagKey in tags || Object.keys(tags).some((k) => k.toLowerCase().includes(tagKey));
+      });
+    }
     return r;
-  }, [flat, spanSearch, spanKindFilter, spanStatusFilter]);
+  }, [flat, spanSearch, spanKindFilter, spanStatusFilter, spanTagFilter]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -345,6 +356,20 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
           onChange={setSpanStatusFilter}
           className="w-28"
         />
+        <div className="relative flex-1 min-w-[120px] max-w-[160px]">
+          <input
+            type="text"
+            placeholder="标签 (key:value)"
+            value={spanTagFilter}
+            onChange={(e) => setSpanTagFilter(e.target.value)}
+            className="w-full px-2 py-1 text-[11px] rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-500 placeholder-gray-400"
+          />
+          {spanTagFilter && (
+            <button onClick={() => setSpanTagFilter('')} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600" aria-label="清除标签筛选">
+              <span className="text-[10px]">✕</span>
+            </button>
+          )}
+        </div>
         {filteredFlat.length !== flat.length && (
           <span className="text-[10px] text-gray-400">{filteredFlat.length}/{flat.length}</span>
         )}

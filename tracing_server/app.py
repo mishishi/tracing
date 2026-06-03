@@ -2,16 +2,54 @@
 
 import json
 import asyncio
+import time
+import os
 from typing import AsyncGenerator
+from collections import defaultdict
 
 from fastapi import FastAPI, Query, Body, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs, delete_spans, get_error_stats, get_latency_heatmap, create_share, get_share, get_percentiles_trend
+from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs, delete_spans, get_error_stats, get_latency_heatmap, create_share, get_share, get_percentiles_trend, search_spans
 from .store import get_stats as _get_stats
+from .store import cleanup_expired_shares
 
 app = FastAPI(title="Tracing Server", version="0.2.0")
+
+logger = __import__('logging').getLogger('tracing.server')
+# ── Rate Limiter (token bucket) ──────────────
+RATE_LIMIT_RPS = float(os.environ.get("TRACING_RATE_LIMIT", "100"))
+_rate_bucket: dict[str, list[float]] = defaultdict(list)
+
+def _check_rate(key: str = "default") -> bool:
+    """Simple sliding-window rate limiter. Returns True if allowed."""
+    now = time.time()
+    window = now - 1.0
+    bucket = _rate_bucket[key]
+    # Remove old entries
+    _rate_bucket[key] = [t for t in bucket if t > window]
+    if len(_rate_bucket[key]) >= RATE_LIMIT_RPS:
+        return False
+    _rate_bucket[key].append(now)
+    return True
+
+# ── Auto-cleanup background task ─────────────
+RETENTION_DAYS = int(os.environ.get("TRACING_RETENTION_DAYS", "30"))
+
+async def _auto_cleanup_loop():
+    """Periodically clean up old traces and expired shares."""
+    while True:
+        await asyncio.sleep(3600)  # Every hour
+        try:
+            deleted = cleanup_old_traces(retention_days=RETENTION_DAYS)
+            if deleted:
+                logger.info(f"Auto-cleanup: removed {deleted} old traces (retention={RETENTION_DAYS}d)")
+            cleanup_expired_shares()
+        except Exception as e:
+            logger.warning(f"Auto-cleanup failed: {e}")
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +57,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def start_cleanup():
+    asyncio.create_task(_auto_cleanup_loop())
 
 # ── SSE ─────────────────────────────────────────
 
@@ -83,6 +126,9 @@ async def shutdown():
 
 @app.post("/spans")
 async def ingest_spans(spans: list[dict]):
+    if not _check_rate("ingest"):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"error": "rate limit exceeded"}, status_code=429)
     _insert_spans(spans)
     trace_ids: set[str] = set()
     for s in spans:
@@ -119,6 +165,16 @@ async def trace_list(
 async def stats(project: str = Query(default="")):
     return _get_stats(project=project)
 
+
+@app.get("/search")
+async def search(
+    q: str = Query(default="", min_length=2),
+    project: str = Query(default=""),
+    limit: int = Query(default=50, le=100),
+):
+    if len(q) < 2:
+        return {"results": [], "query": q}
+    return {"results": search_spans(query=q, project=project, limit=limit), "query": q}
 
 @app.get("/health")
 async def health():

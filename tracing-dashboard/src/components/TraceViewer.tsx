@@ -16,6 +16,7 @@ export interface SpanMeta {
   input_tokens?: number; output_tokens?: number; total_tokens?: number;
   tool_name?: string; tool_input?: string; tool_output?: string;
   prompt_preview?: string; response_preview?: string;
+  tags?: Record<string, string>;
   [key: string]: unknown;
 }
 

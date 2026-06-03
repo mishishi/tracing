@@ -204,6 +204,22 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
           </section>
         )}
 
+        {/* Tags */}
+        {metadata.tags && Object.keys(metadata.tags).length > 0 && (
+          <section>
+            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              标签
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(metadata.tags).map(([k, v]) => (
+                <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                  {k}: {v}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Error */}
         {span.error && (
           <section>
