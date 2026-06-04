@@ -2,7 +2,7 @@
 import os, sys, json, tempfile
 
 # Point to a temporary DB
-db_path = os.path.join(tempfile.gettempdir(), "test_tracing_refactor.db")
+db_path = os.path.join(tempfile.gettempdir(), f"test_tracing_refactor_{os.getpid()}.db")
 os.environ["TRACING_DB_PATH"] = db_path
 sys.path.insert(0, ".")
 
@@ -110,9 +110,12 @@ from tracing_server.store import (
     search_spans, delete_spans, cleanup_old_traces,
 )
 
-# Clean slate
-if os.path.exists(db_path):
-    os.remove(db_path)
+# Clean slate (ignore file lock from connection pool)
+try:
+    if os.path.exists(db_path):
+        os.remove(db_path)
+except (OSError, PermissionError):
+    pass
 init_db()
 
 span1 = {

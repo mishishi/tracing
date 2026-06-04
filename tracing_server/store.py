@@ -10,10 +10,20 @@ DB_PATH = Path(os.environ.get("TRACING_DB_PATH", Path.home() / ".tracing" / "tra
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
+# Connection pool: thread-local reuse, WAL mode for concurrency
+_conn_local = __import__("threading").local()
+
 def _conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=NORMAL")
+    """Get a thread-local SQLite connection. Reuses connections per thread.
+    Resets row_factory before each use to prevent state leakage."""
+    if not hasattr(_conn_local, "conn") or _conn_local.conn is None:
+        conn = sqlite3.connect(str(DB_PATH), timeout=10.0)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+        _conn_local.conn = conn
+    conn = _conn_local.conn
+    conn.row_factory = None  # reset before each use
     return conn
 
 
