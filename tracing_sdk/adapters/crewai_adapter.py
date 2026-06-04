@@ -51,7 +51,8 @@ def _resolve_crewai_events():
             "LLMCallStartedEvent": "crewai.events.types.llm_events",
             "LLMCallCompletedEvent": "crewai.events.types.llm_events",
             "LLMCallFailedEvent": "crewai.events.types.llm_events",
-            "ToolUsageEvent": "crewai.events.types.tool_usage_events",
+            "ToolUsageStartedEvent": "crewai.events.types.tool_usage_events",
+            "ToolUsageFinishedEvent": "crewai.events.types.tool_usage_events",
             "ToolUsageErrorEvent": "crewai.events.types.tool_usage_events",
         },
     ]
@@ -100,7 +101,8 @@ def _patch_crewai():
     LLMCallStartedEvent = events["LLMCallStartedEvent"]
     LLMCallCompletedEvent = events["LLMCallCompletedEvent"]
     LLMCallFailedEvent = events["LLMCallFailedEvent"]
-    ToolUsageEvent = events["ToolUsageEvent"]
+    ToolUsageStartedEvent = events["ToolUsageStartedEvent"]
+    ToolUsageFinishedEvent = events["ToolUsageFinishedEvent"]
     ToolUsageErrorEvent = events["ToolUsageErrorEvent"]
 
     _log("adapter: imports ok")
@@ -308,7 +310,7 @@ def _patch_crewai():
 
     # ── Tool calls (children of current agent) ──
 
-    @crewai_event_bus.on(ToolUsageEvent)
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
     def _on_tool_usage(source, event):
         tool_name = getattr(event, "tool_name", "") or "unknown_tool"
         _log("TOOL: " + tool_name)
