@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, AlertTriangle, DollarSign, Cpu, Layers, Loader2 } from 'lucide-react';
 import { MultiSelect } from './MultiSelect';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { SkeletonStats, SkeletonBlock } from './Skeleton';
 
 const PROJECT_COLORS = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#22c55e'];
@@ -210,13 +211,41 @@ function TrendChart({
 
   const maxVal = Math.max(...selected.flatMap((p) => allDays.map((d) => getValue(p, d))), 1);
 
-  const W = 600; const H = 220;
-  const P = { top: 16, right: 16, bottom: 28, left: 54 };
-  const plotW = W - P.left - P.right;
-  const plotH = H - P.top - P.bottom;
 
-  const xScale = (i: number) => P.left + (i / Math.max(allDays.length - 1, 1)) * plotW;
-  const yScale = (val: number) => P.top + plotH - (val / maxVal) * plotH;
+
+
+  // Build chart data for Recharts: { label, "proj-a": 123, "proj-b": 456 }
+  const chartData = allDays.map((date) => {
+    const point: Record<string, string | number> = { label: date.slice(5) };
+    for (const p of selected) {
+      point[p] = getValue(p, date);
+    }
+    return point;
+  });
+
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean;
+    payload?: Array<{ name: string; value: number; color: string }>;
+    label?: string;
+  }) => {
+    if (!active || !payload) return null;
+    return (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg text-xs">
+        <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>
+        <div className="space-y-0.5">
+          {payload.map((entry) => (
+            <div key={entry.name} className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+              <span className="text-gray-500 dark:text-gray-400 truncate max-w-[80px]">{entry.name}</span>
+              <span className="text-gray-700 dark:text-gray-200 font-mono ml-auto">
+                {metric === 'cost' ? fmtCost(entry.value) : fmtNum(Math.round(entry.value))}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const metricLabel = { cost: '成本', calls: '调用量', errors: '错误率' };
 
@@ -254,87 +283,48 @@ function TrendChart({
         })}
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 300 }}>
-        {/* Grid lines */}
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-          const y = yScale(maxVal * ratio);
-          return (
-            <g key={ratio}>
-              <line x1={P.left} y1={y} x2={W - P.right} y2={y} stroke="var(--border)" strokeWidth="0.5" />
-              <text x={P.left - 4} y={y + 3} textAnchor="end" className="text-[8px] fill-gray-400" fontFamily="JetBrains Mono">
-                {metric === 'cost' ? fmtCost(maxVal * ratio) : fmtNum(Math.round(maxVal * ratio))}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Lines per project */}
-        {selected.map((project) => {
-          const color = projects.find((pr) => pr.value === project)?.color || '#888';
-          const pathD = allDays.map((d, i) => {
-            const val = getValue(project, d);
-            return (i === 0 ? 'M' : 'L') + xScale(i) + ',' + yScale(val);
-          }).join(' ');
-          return (
-            <path key={project} d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
-          );
-        })}
-
-        {/* Hover areas */}
-        {allDays.map((day, i) => (
-          <rect
-            key={day}
-            x={xScale(i) - (plotW / allDays.length / 2)}
-            y={P.top}
-            width={plotW / allDays.length}
-            height={plotH}
-            fill="transparent"
-            onMouseEnter={() => {
-              const values = selected.map((p) => {
-                const color = projects.find((pr) => pr.value === p)?.color || '#888';
-                const val = getValue(p, day);
-                return { project: p, value: metric === 'cost' ? fmtCost(val) : String(Math.round(val)), color };
-              });
-              onTooltip({ x: xScale(i), y: P.top, values });
-            }}
-            onMouseLeave={() => onTooltip(null)}
-          />
-        ))}
-
-        {/* Tooltip */}
-        {tooltip && (
-          <g>
-            <line x1={tooltip.x} y1={P.top} x2={tooltip.x} y2={P.top + plotH} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,2" />
-            <rect
-              x={tooltip.x > W / 2 ? tooltip.x - 140 : tooltip.x + 8}
-              y={tooltip.y + 4}
-              width="130"
-              height={12 + tooltip.values.length * 16}
-              rx="6"
-              fill="var(--surface)"
-              stroke="var(--border)"
+      {/* Chart */}
+      <div className="w-full" style={{ minHeight: 200 }}>
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickLine={false}
+              axisLine={{ stroke: '#e5e7eb' }}
             />
-            {tooltip.values.map((v, i) => (
-              <g key={v.project}>
-                <circle cx={tooltip.x > W / 2 ? tooltip.x - 132 : tooltip.x + 16} cy={tooltip.y + 18 + i * 16} r="3" fill={v.color} />
-                <text x={tooltip.x > W / 2 ? tooltip.x - 125 : tooltip.x + 23} y={tooltip.y + 21 + i * 16} className="text-[9px] fill-gray-500" fontFamily="Inter">
-                  {v.project}: {v.value}
-                </text>
-              </g>
-            ))}
-          </g>
-        )}
-
-        {/* X axis labels */}
-        {allDays.filter((_, i) => i % Math.max(1, Math.floor(allDays.length / 6)) === 0 || i === allDays.length - 1).map((day) => {
-          const i = allDays.indexOf(day);
-          return (
-            <text key={day} x={xScale(i)} y={H - 4} textAnchor="middle" className="text-[8px] fill-gray-400" fontFamily="Inter">
-              {day.slice(5)}
-            </text>
-          );
-        })}
-      </svg>
+            <YAxis
+              tick={{ fontSize: 10, fill: '#9ca3af', fontFamily: 'JetBrains Mono' }}
+              tickFormatter={(v) => metric === 'cost' ? fmtCost(Number(v)) : fmtNum(Math.round(Number(v)))}
+              axisLine={false}
+              tickLine={false}
+              width={54}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{ fontSize: 10, paddingTop: 4 }}
+              iconType="line"
+              iconSize={10}
+            />
+            {selected.map((project) => {
+              const color = projects.find((pr) => pr.value === project)?.color || '#888';
+              return (
+                <Line
+                  key={project}
+                  type="monotone"
+                  dataKey={project}
+                  name={project}
+                  stroke={color}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4, fill: color }}
+                />
+              );
+            })}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

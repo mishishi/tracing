@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { SkeletonBlock } from './Skeleton';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 interface DayData {
   day: string;
@@ -30,11 +40,15 @@ interface PercentileTrendProps {
   project?: string;
 }
 
+function fmtMs(ms: number): string {
+  if (ms >= 1000) return (ms / 1000).toFixed(1) + 's';
+  return Math.round(ms) + 'ms';
+}
+
 export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps) {
   const [data, setData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeKind, setActiveKind] = useState('llm_call');
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; day: string; p50: number; p95: number; p99: number } | null>(null);
 
   const fetchData = () => {
     const params = new URLSearchParams();
@@ -66,29 +80,49 @@ export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps
     );
   }
 
-  const maxMs = Math.max(...currentDays.flatMap((d: DayData) => [d.p99, d.p95, d.p50]), 1);
-  const W = 600; const H = 200; const P = { top: 10, right: 10, bottom: 24, left: 48 };
-  const plotW = W - P.left - P.right;
-  const plotH = H - P.top - P.bottom;
-
-  const xScale = (i: number) => P.left + (i / Math.max(currentDays.length - 1, 1)) * plotW;
-  const yScale = (ms: number) => P.top + plotH - (ms / maxMs) * plotH;
-
-  const fmtMs = (ms: number) => {
-    if (ms >= 1000) return (ms / 1000).toFixed(1) + 's';
-    return Math.round(ms) + 'ms';
-  };
-
   const kindKeys = ['llm_call', 'agent', 'tool_call'] as const;
-  const lineNames = ['p99', 'p95', 'p50'] as const;
 
-  // Build SVG paths
-  const paths: Record<string, string> = {};
-  for (const line of lineNames) {
-    paths[line] = currentDays.map((d: DayData, i: number) =>
-      (i === 0 ? 'M' : 'L') + xScale(i) + ',' + yScale(d[line])
-    ).join(' ');
-  }
+  const chartData = currentDays.map((d) => ({
+    ...d,
+    label: d.day.slice(5),
+  }));
+
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean;
+    payload?: Array<{ name: string; value: number; color: string }>;
+    label?: string;
+  }) => {
+    if (!active || !payload) return null;
+    const dayData = currentDays.find((d) => d.day.slice(5) === label);
+    return (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg text-xs">
+        <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: lineColors.p50 }} />
+            <span className="text-gray-500 dark:text-gray-400">P50</span>
+            <span className="text-gray-700 dark:text-gray-200 font-mono ml-auto">{fmtMs(dayData?.p50 || 0)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: lineColors.p95 }} />
+            <span className="text-gray-500 dark:text-gray-400">P95</span>
+            <span className="text-gray-700 dark:text-gray-200 font-mono ml-auto">{fmtMs(dayData?.p95 || 0)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: lineColors.p99 }} />
+            <span className="text-gray-500 dark:text-gray-400">P99</span>
+            <span className="text-gray-700 dark:text-gray-200 font-mono ml-auto">{fmtMs(dayData?.p99 || 0)}</span>
+          </div>
+          {dayData && (
+            <div className="flex items-center gap-2 pt-0.5 border-t border-gray-100 dark:border-gray-700">
+              <span className="text-gray-400">调用</span>
+              <span className="text-gray-600 dark:text-gray-300 font-mono ml-auto">{dayData.count} 次</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="bento">
@@ -115,96 +149,58 @@ export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mb-2">
-        {lineNames.map((l) => (
-          <div key={l} className="flex items-center gap-1.5">
-            <span className="w-3 h-0.5 rounded" style={{ backgroundColor: lineColors[l] }} />
-            <span className="text-[10px] text-gray-400 uppercase">{l}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Chart */}
-      <div className="relative overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 300 }}>
-          {/* Grid lines */}
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-            const y = yScale(maxMs * ratio);
-            return (
-              <g key={ratio}>
-                <line x1={P.left} y1={y} x2={W - P.right} y2={y} stroke="var(--border)" strokeWidth="0.5" />
-                <text x={P.left - 4} y={y + 3} textAnchor="end" className="text-[8px] fill-gray-400" fontFamily="JetBrains Mono">
-                  {fmtMs(maxMs * ratio)}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Lines */}
-          {lineNames.map((l) => (
-            <path key={l} d={paths[l]} fill="none" stroke={lineColors[l]} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          ))}
-
-          {/* Invisible hover areas */}
-          {currentDays.map((d: DayData, i: number) => (
-            <rect
-              key={d.day}
-              x={xScale(i) - (plotW / currentDays.length / 2)}
-              y={P.top}
-              width={plotW / currentDays.length}
-              height={plotH}
-              fill="transparent"
-              onMouseEnter={() => setTooltip({ x: xScale(i), y: P.top, day: d.day, p50: d.p50, p95: d.p95, p99: d.p99 })}
-              onMouseLeave={() => setTooltip(null)}
+      <div className="w-full" style={{ minHeight: 200 }}>
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickLine={false}
+              axisLine={{ stroke: '#e5e7eb' }}
             />
-          ))}
-
-          {/* Tooltip */}
-          {tooltip && (
-            <g>
-              <line x1={tooltip.x} y1={P.top} x2={tooltip.x} y2={P.top + plotH} stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="3,2" />
-              <rect
-                x={tooltip.x > W / 2 ? tooltip.x - 120 : tooltip.x + 8}
-                y={tooltip.y + 4}
-                width="110"
-                height="52"
-                rx="6"
-                fill="var(--surface)"
-                stroke="var(--border)"
-              />
-              <text x={tooltip.x > W / 2 ? tooltip.x - 112 : tooltip.x + 16} y={tooltip.y + 18} className="text-[9px] fill-gray-500" fontFamily="Inter">
-                {tooltip.day.slice(5)}
-              </text>
-              <text x={tooltip.x > W / 2 ? tooltip.x - 112 : tooltip.x + 16} y={tooltip.y + 32} className="text-[9px] fill-green-500" fontFamily="JetBrains Mono">
-                P50 {fmtMs(tooltip.p50)}
-              </text>
-              <text x={tooltip.x > W / 2 ? tooltip.x - 112 : tooltip.x + 16} y={tooltip.y + 44} className="text-[9px] fill-amber-500" fontFamily="JetBrains Mono">
-                P95 {fmtMs(tooltip.p95)}
-              </text>
-              <text x={tooltip.x > W / 2 ? tooltip.x - 54 : tooltip.x + 74} y={tooltip.y + 44} className="text-[9px] fill-red-500" fontFamily="JetBrains Mono">
-                P99 {fmtMs(tooltip.p99)}
-              </text>
-            </g>
-          )}
-
-          {/* X axis labels (sparse) */}
-          {currentDays.filter((_: DayData, i: number) => i % Math.max(1, Math.floor(currentDays.length / 6)) === 0 || i === currentDays.length - 1).map((d: DayData) => {
-            const i = currentDays.indexOf(d);
-            return (
-              <text
-                key={d.day}
-                x={xScale(i)}
-                y={H - 4}
-                textAnchor="middle"
-                className="text-[8px] fill-gray-400"
-                fontFamily="Inter"
-              >
-                {d.day.slice(5)}
-              </text>
-            );
-          })}
-        </svg>
+            <YAxis
+              tick={{ fontSize: 10, fill: '#9ca3af', fontFamily: 'JetBrains Mono' }}
+              tickFormatter={fmtMs}
+              axisLine={false}
+              tickLine={false}
+              width={48}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
+              iconType="line"
+              iconSize={10}
+            />
+            <Line
+              type="monotone"
+              dataKey="p50"
+              name="P50"
+              stroke={lineColors.p50}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: lineColors.p50 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="p95"
+              name="P95"
+              stroke={lineColors.p95}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: lineColors.p95 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="p99"
+              name="P99"
+              stroke={lineColors.p99}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: lineColors.p99 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
