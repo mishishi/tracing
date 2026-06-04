@@ -120,4 +120,53 @@ export function StatCard({ icon, label, value, valueClass }: {
   );
 }
 
+
+// ── Tree utilities ──
+
+export interface TreeNode {
+  span: Span;
+  children: TreeNode[];
+  depth: number;
+}
+
+export function buildTree(spans: Span[]): TreeNode[] {
+  const map = new Map<string, TreeNode>();
+  const roots: TreeNode[] = [];
+
+  for (const span of spans) {
+    map.set(span.id, { span, children: [], depth: 0 });
+  }
+
+  for (const span of spans) {
+    const node = map.get(span.id)!;
+    if (span.parent_id && map.has(span.parent_id)) {
+      map.get(span.parent_id)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  function setDepth(nodes: TreeNode[], d: number) {
+    for (const n of nodes) {
+      n.depth = d;
+      setDepth(n.children, d + 1);
+    }
+  }
+  setDepth(roots, 0);
+
+  return roots;
+}
+
+export function flattenTree(nodes: TreeNode[]): TreeNode[] {
+  const result: TreeNode[] = [];
+  function walk(list: TreeNode[]) {
+    for (const n of list) {
+      result.push(n);
+      walk(n.children);
+    }
+  }
+  walk(nodes);
+  return result;
+}
+
 export const PAGE_SIZE = 50;

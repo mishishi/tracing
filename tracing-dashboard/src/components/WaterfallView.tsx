@@ -1,23 +1,8 @@
 import { useMemo, memo, useState, useCallback } from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Dropdown } from './Dropdown';
-import {
-  Layers, Zap, Code2, Wrench, Activity,
-  CheckCircle2, AlertCircle, Clock,
-} from 'lucide-react';
-import type { Span, TraceData } from '../utils/trace-utils';
-
-/* ================================================
-   Constants
-   ================================================ */
-
-const kindColor: Record<string, string> = {
-  flow: 'bg-purple-400',
-  agent: 'bg-blue-400',
-  llm_call: 'bg-amber-400',
-  tool_call: 'bg-emerald-400',
-  phase: 'bg-indigo-400',
-};
+import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { kindLabel, kindIcons, kindColor, type Span, type TraceData, buildTree, flattenTree, type TreeNode } from '../utils/trace-utils';
 
 const kindBorder: Record<string, string> = {
   flow: 'border-l-purple-500',
@@ -27,71 +12,6 @@ const kindBorder: Record<string, string> = {
   phase: 'border-l-indigo-500',
 };
 
-const kindLabel: Record<string, string> = {
-  flow: '流程',
-  agent: '智能体',
-  llm_call: 'LLM',
-  tool_call: '工具',
-  phase: '阶段',
-};
-
-const kindIcons: Record<string, React.ReactNode> = {
-  flow: <Layers className="w-3 h-3" />,
-  agent: <Activity className="w-3 h-3" />,
-  llm_call: <Zap className="w-3 h-3" />,
-  tool_call: <Wrench className="w-3 h-3" />,
-  phase: <Code2 className="w-3 h-3" />,
-};
-
-/* ================================================
-   Tree Node
-   ================================================ */
-
-interface TreeNode {
-  span: Span;
-  children: TreeNode[];
-  depth: number;
-}
-
-function buildTree(spans: Span[]): TreeNode[] {
-  const map = new Map<string, TreeNode>();
-  const roots: TreeNode[] = [];
-
-  for (const span of spans) {
-    map.set(span.id, { span, children: [], depth: 0 });
-  }
-
-  for (const span of spans) {
-    const node = map.get(span.id)!;
-    if (span.parent_id && map.has(span.parent_id)) {
-      map.get(span.parent_id)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  function setDepth(nodes: TreeNode[], d: number) {
-    for (const n of nodes) {
-      n.depth = d;
-      setDepth(n.children, d + 1);
-    }
-  }
-  setDepth(roots, 0);
-
-  return roots;
-}
-
-function flattenTree(nodes: TreeNode[]): TreeNode[] {
-  const result: TreeNode[] = [];
-  function walk(list: TreeNode[]) {
-    for (const n of list) {
-      result.push(n);
-      walk(n.children);
-    }
-  }
-  walk(nodes);
-  return result;
-}
 
 /* ================================================
    Helpers

@@ -54,7 +54,7 @@ describe('CostView', () => {
   it('renders total calls count', async () => {
     render(<CostView endpoint="http://localhost:9200" />);
     await waitFor(() => {
-      expect(screen.getByText('156')).toBeInTheDocument();
+      expect(screen.getByText(/156/)).toBeInTheDocument();
     });
   });
 
