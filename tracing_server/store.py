@@ -292,9 +292,12 @@ def get_costs(project: str = "", days: int = 30) -> dict:
                 meta = json.loads(r["metadata"])
             except json.JSONDecodeError:
                 meta = {}
-            model = meta.get("model", "unknown")
+            model = meta.get("model", "") or "unknown"
             input_tokens = meta.get("input_tokens", 0) or 0
             output_tokens = meta.get("output_tokens", 0) or 0
+            # Skip spans with no model info (empty model + no tokens)
+            if model == "unknown" and input_tokens == 0 and output_tokens == 0:
+                continue
             proj = r["project"] or "default"
             day = r["start_time"][:10] if r["start_time"] else "unknown"
 
