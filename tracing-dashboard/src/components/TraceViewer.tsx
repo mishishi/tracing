@@ -452,11 +452,25 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => setViewMode(viewMode === 'list' ? 'waterfall' : 'list')}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                      aria-label={viewMode === 'list' ? '\u7011\u5e03\u56fe\u89c6\u56fe' : '\u5217\u8868\u89c6\u56fe'}>
-                      {viewMode === 'list' ? <GanttChartSquare className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                    </button>
+                    <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                      {(['timeline', 'waterfall', 'list'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => setViewMode(mode)}
+                          className={
+                            'p-1 rounded-md transition-colors ' +
+                            (viewMode === mode
+                              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300')
+                          }
+                          aria-label={mode === 'timeline' ? '时间线' : mode === 'waterfall' ? '瀑布图' : '列表'}
+                        >
+                          {mode === 'timeline' ? <Clock className="w-3.5 h-3.5" /> :
+                           mode === 'waterfall' ? <GanttChartSquare className="w-3.5 h-3.5" /> :
+                           <List className="w-3.5 h-3.5" />}
+                        </button>
+                      ))}
+                    </div>
                     <button onClick={toggleAll} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                       aria-label={allExpanded ? '\u6298\u53e0\u5168\u90e8' : '\u5c55\u5f00\u5168\u90e8'}>
                       {allExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -476,6 +490,11 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
                   </div>
                 </div>
 
+                {viewMode === 'timeline' && selected && (
+                  <div className="flex-1 overflow-auto bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 p-4">
+                    <TimelineView spans={selected.spans} />
+                  </div>
+                )}
                 {viewMode === 'waterfall' && (
                   <>
                     <WaterfallView trace={selected} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} />
