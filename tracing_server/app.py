@@ -2,6 +2,16 @@
 
 import os
 
+import json
+import asyncio
+import time
+from typing import AsyncGenerator
+from collections import defaultdict
+
+from fastapi import FastAPI, Query, Body, HTTPException, Request, Depends
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 # ── API Key Auth ──────────────────────────────
 API_KEY = os.environ.get("TRACING_API_KEY", "").strip()
 
@@ -18,16 +28,6 @@ async def _require_api_key(request: Request):
         return
     raise HTTPException(status_code=401, detail="Missing or invalid API key")
 
-import json
-import asyncio
-import time
-from typing import AsyncGenerator
-from collections import defaultdict
-
-from fastapi import FastAPI, Query, Body, HTTPException, Request, Depends
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from .store import _insert_spans, get_trace, list_traces, cleanup_old_traces, get_percentiles, get_project_list, get_costs, delete_spans, get_error_stats, get_latency_heatmap, create_share, get_share, get_percentiles_trend, search_spans
 from .store import get_stats as _get_stats
 from .store import cleanup_expired_shares
