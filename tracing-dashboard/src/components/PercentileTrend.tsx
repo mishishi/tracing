@@ -71,14 +71,6 @@ export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps
   if (loading) return <SkeletonBlock rows={4} />;
 
   const currentDays: DayData[] = data?.[activeKind as keyof TrendData] || [];
-  if (currentDays.length === 0) {
-    return (
-      <div className="bento text-center py-8">
-        <TrendingUp className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-        <p className="text-xs text-gray-400">暂无延迟趋势数据</p>
-      </div>
-    );
-  }
 
   const kindKeys = ['llm_call', 'agent', 'tool_call'] as const;
 
@@ -149,59 +141,66 @@ export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps
         </div>
       </div>
 
-      <div className="w-full" style={{ minHeight: 200 }}>
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
-            <XAxis
-              dataKey="label"
-              tick={{ fontSize: 10, fill: '#9ca3af' }}
-              tickLine={false}
-              axisLine={{ stroke: '#e5e7eb' }}
-            />
-            <YAxis
-              tick={{ fontSize: 10, fill: '#9ca3af', fontFamily: 'JetBrains Mono' }}
-              tickFormatter={fmtMs}
-              axisLine={false}
-              tickLine={false}
-              width={48}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
-              iconType="line"
-              iconSize={10}
-            />
-            <Line
-              type="monotone"
-              dataKey="p99"
-              name="P99"
-              stroke={lineColors.p99}
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: lineColors.p99 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="p95"
-              name="P95"
-              stroke={lineColors.p95}
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: lineColors.p95 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="p50"
-              name="P50"
-              stroke={lineColors.p50}
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 5, fill: lineColors.p50 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {currentDays.length === 0 ? (
+        <div className="text-center py-10">
+          <TrendingUp className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+          <p className="text-xs text-gray-400">暂无延迟趋势数据</p>
+        </div>
+      ) : (
+        <div className="w-full" style={{ minHeight: 200 }}>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tickLine={false}
+                axisLine={{ stroke: '#e5e7eb' }}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: '#9ca3af', fontFamily: 'JetBrains Mono' }}
+                tickFormatter={fmtMs}
+                axisLine={false}
+                tickLine={false}
+                width={48}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
+                iconType="line"
+                iconSize={10}
+              />
+              <Line
+                type="monotone"
+                dataKey="p99"
+                name="P99"
+                stroke={lineColors.p99}
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 4, fill: lineColors.p99 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="p95"
+                name="P95"
+                stroke={lineColors.p95}
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 4, fill: lineColors.p95 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="p50"
+                name="P50"
+                stroke={lineColors.p50}
+                strokeWidth={2.5}
+                dot={false}
+                activeDot={{ r: 5, fill: lineColors.p50 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
