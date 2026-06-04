@@ -567,6 +567,21 @@ def get_percentiles_trend(project: str = "", days: int = 30) -> dict:
 
         # Build result: { kind: [{ day, p50, p95, p99, avg, count }] }
         from collections import OrderedDict
+        
+        def _percentile(sorted_vals: list, p: float) -> float:
+            """Linear interpolation percentile (like numpy)."""
+            n = len(sorted_vals)
+            if n == 0:
+                return 0
+            if n == 1:
+                return sorted_vals[0]
+            k = (n - 1) * p
+            f = int(k)
+            c = k - f
+            if f + 1 >= n:
+                return sorted_vals[-1]
+            return sorted_vals[f] + c * (sorted_vals[f + 1] - sorted_vals[f])
+        
         result: dict = {}
         for kind in ["agent", "llm_call", "tool_call"]:
             day_data: list = []
@@ -578,9 +593,9 @@ def get_percentiles_trend(project: str = "", days: int = 30) -> dict:
                 n = len(vals)
                 day_data.append({
                     "day": day,
-                    "p50": vals[int(n * 0.50)],
-                    "p95": vals[min(int(n * 0.95), n - 1)],
-                    "p99": vals[min(int(n * 0.99), n - 1)],
+                    "p50": round(_percentile(vals, 0.50), 1),
+                    "p95": round(_percentile(vals, 0.95), 1),
+                    "p99": round(_percentile(vals, 0.99), 1),
                     "avg": round(sum(vals) / n, 1),
                     "count": n,
                 })

@@ -174,30 +174,30 @@ export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps
             />
             <Line
               type="monotone"
-              dataKey="p50"
-              name="P50"
-              stroke={lineColors.p50}
-              strokeWidth={2}
+              dataKey="p99"
+              name="P99"
+              stroke={lineColors.p99}
+              strokeWidth={1.5}
               dot={false}
-              activeDot={{ r: 4, fill: lineColors.p50 }}
+              activeDot={{ r: 4, fill: lineColors.p99 }}
             />
             <Line
               type="monotone"
               dataKey="p95"
               name="P95"
               stroke={lineColors.p95}
-              strokeWidth={2}
+              strokeWidth={1.5}
               dot={false}
               activeDot={{ r: 4, fill: lineColors.p95 }}
             />
             <Line
               type="monotone"
-              dataKey="p99"
-              name="P99"
-              stroke={lineColors.p99}
-              strokeWidth={2}
+              dataKey="p50"
+              name="P50"
+              stroke={lineColors.p50}
+              strokeWidth={2.5}
               dot={false}
-              activeDot={{ r: 4, fill: lineColors.p99 }}
+              activeDot={{ r: 5, fill: lineColors.p50 }}
             />
           </LineChart>
         </ResponsiveContainer>
