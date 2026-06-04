@@ -40,7 +40,7 @@ _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="tracing-flush"
 
 
 def _flush():
-    """Send buffered spans to server."""
+    """Send buffered spans to server synchronously."""
     global _BUFFER
     with _LOCK:
         if not _BUFFER:
@@ -48,23 +48,21 @@ def _flush():
         batch = _BUFFER[:]
         _BUFFER = []
 
-    def _send():
-        try:
-            data = json.dumps(batch).encode("utf-8")
-            req = urllib.request.Request(
-                f"{_ENDPOINT}/spans",
-                data=data,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            urllib.request.urlopen(req, timeout=5)
-        except Exception as e:
-            logger.warning(f"Flush failed ({len(batch)} spans): {e}")
-            # Re-queue data so it's not lost
-            with _LOCK:
-                _BUFFER = batch + _BUFFER
+    try:
+        data = json.dumps(batch).encode("utf-8")
+        req = urllib.request.Request(
+            f"{_ENDPOINT}/spans",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        logger.warning(f"Flush failed ({len(batch)} spans): {e}")
+        # Re-queue data so it's not lost
+        with _LOCK:
+            _BUFFER = batch + _BUFFER
 
-    _executor.submit(_send)
 
 
 def _flush_loop():
@@ -121,9 +119,6 @@ def set_session(session_id: str, project: str = ""):
     _SESSION_ID = session_id
     if project:
         _PROJECT = project
-    if sample_rate is not None:
-        global _SAMPLE_RATE
-        _SAMPLE_RATE = max(0.0, min(1.0, sample_rate))
     _lazy_enable()
     _ensure_daemon()
 
@@ -142,9 +137,14 @@ def send(span: Span):
                 logger.debug(f"Sampling: dropped {_DROPPED} spans (rate={_SAMPLE_RATE})")
             return
 
-    if _SESSION_ID and not span.session_id:
+    # Auto-generate IDs if not set
+    if not span.trace_id:
+        import uuid
+        span.trace_id = uuid.uuid4().hex[:12]
+    if not span.session_id:
+        span.session_id = span.trace_id
+    if _SESSION_ID:
         span.session_id = _SESSION_ID
-    if _SESSION_ID and not span.trace_id:
         span.trace_id = _SESSION_ID
     if not span.project:
         span.project = _PROJECT
