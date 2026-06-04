@@ -20,19 +20,22 @@ async def create_share_link(body: dict = Body(...)):
     view_state = body.get("view_state", {})
     expires_in_hours = body.get("expires_in_hours", 24)
 
-    share = create_share(
+    share_id = create_share(
         trace_id=trace_id,
         project=project,
         view_state=view_state,
-        expires_hours=expires_in_hours,
     )
-    if not share:
+    if not share_id:
         return JSONResponse(
             status_code=404,
             content={"error": "trace not found"},
         )
-    share["url"] = f"/s/{share['share_id']}"
-    return share
+    return {
+        "share_id": share_id,
+        "trace_id": trace_id,
+        "project": project,
+        "url": f"/s/{share_id}",
+    }
 
 
 @router.get("/s/{share_id}")

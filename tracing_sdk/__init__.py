@@ -1,10 +1,20 @@
 """tracing-sdk — Zero-code auto-instrumentation for AI agent frameworks.
 
 Usage:
-    import tracing_sdk            # auto-detect localhost:9200
-    tracing_sdk.init(project="my-project")  # explicit init
-    tracing_sdk.configure(endpoint="http://prod:9200", project="my-project")
+    import tracing_sdk
+    tracing_sdk.init(project="my-project")
+
+    # Manual span instrumentation
+    with tracing_sdk.trace("operation-name", kind="llm_call") as span:
+        span.metadata["model"] = "gpt-4"
+        # ... your code ...
+
+    # Graceful shutdown (flushes pending spans)
+    tracing_sdk.shutdown()
 """
+
+__all__ = ["init", "configure", "shutdown", "set_session", "get_stats", "trace", "Span", "SpanKind", "SpanStatus"]
+
 
 __version__ = "0.2.0"
 
@@ -58,6 +68,21 @@ def configure(endpoint: str = None, project: str = None, sample_rate: float = No
     """Same as init()."""
     init(endpoint=endpoint, project=project, sample_rate=sample_rate)
 
+
+def shutdown():
+    """Gracefully shut down SDK: flush pending spans and stop daemon."""
+    from .collector import shutdown as _shutdown
+    _shutdown()
+
+
+def get_stats() -> dict:
+    """Get collector statistics."""
+    from .collector import get_stats as _gs
+    return _gs()
+
+
+# Context manager for manual instrumentation
+from .tracer import trace
 
 # Auto-init on import if endpoint configured
 import os

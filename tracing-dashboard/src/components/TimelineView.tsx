@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { Span } from './TraceViewer';
+import type { Span } from '../utils/trace-utils';
 
 const kindColor: Record<string, string> = {
   flow: '#7c3aed', agent: '#2563eb', llm_call: '#d97706',

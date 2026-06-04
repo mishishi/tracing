@@ -24,7 +24,7 @@ async def errors(
     project: str = Query(default=""),
     limit: int = Query(default=20, ge=1, le=100),
 ):
-    return get_error_stats(project=project, limit=limit)
+    return get_error_stats(project=project, days=limit)  # days param reused for limit
 
 
 @router.get("/latency-heatmap")
@@ -46,9 +46,8 @@ async def percentiles_trend(
 @router.get("/percentiles")
 async def percentiles(
     project: str = Query(default=""),
-    kind: str = Query(default=""),
 ):
-    return get_percentiles(project=project, kind=kind)
+    return get_percentiles(project=project)
 
 
 @router.get("/metrics")

@@ -5,7 +5,7 @@ import {
   Layers, Zap, Code2, Wrench, Activity,
   CheckCircle2, AlertCircle, Clock,
 } from 'lucide-react';
-import type { Span, TraceData } from './TraceViewer';
+import type { Span, TraceData } from '../utils/trace-utils';
 
 /* ================================================
    Constants

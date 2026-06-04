@@ -1,6 +1,6 @@
 import { X, Copy, CheckCircle2, Zap, Wrench, Cpu, Clock, Layers } from 'lucide-react';
 import { useState } from 'react';
-import type { Span } from './TraceViewer';
+import type { Span } from '../utils/trace-utils';
 import { JsonBlock } from './JsonBlock';
 
 /* ================================================
@@ -82,7 +82,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         <section>
           <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">基本信息</h4>
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
-            <div className="flex justify-between">
+            <div className="flex flex-col gap-0.5">
               <span className="text-gray-400">名称</span>
               <span className="text-gray-700 dark:text-gray-300 font-medium">{span.name}</span>
             </div>
@@ -100,9 +100,9 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
               <span className="text-gray-400">耗时</span>
               <span className="text-gray-700 dark:text-gray-300 font-mono">{fmtMs(span.duration_ms)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex flex-col gap-0.5">
               <span className="text-gray-400">Span ID</span>
-              <span className="text-gray-700 dark:text-gray-300 font-mono text-[10px]">{span.id}</span>
+              <span className="text-gray-700 dark:text-gray-300 font-mono text-[10px] break-all">{span.id}</span>
             </div>
           </div>
         </section>
@@ -144,21 +144,21 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
             </h4>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
               {metadata.agent && (
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-0.5">
                   <span className="text-gray-400">Agent</span>
                   <span className="text-gray-700 dark:text-gray-300">{metadata.agent}</span>
                 </div>
               )}
               {metadata.agent_role && !metadata.agent && (
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-0.5">
                   <span className="text-gray-400">Role</span>
                   <span className="text-gray-700 dark:text-gray-300">{metadata.agent_role}</span>
                 </div>
               )}
               {metadata.task && (
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-0.5">
                   <span className="text-gray-400">Task</span>
-                  <span className="text-gray-700 dark:text-gray-300 text-right max-w-[200px]">{metadata.task}</span>
+                  <span className="text-gray-700 dark:text-gray-300 leading-relaxed">{metadata.task}</span>
                 </div>
               )}
             </div>

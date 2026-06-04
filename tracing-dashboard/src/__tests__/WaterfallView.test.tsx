@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { WaterfallView } from '../components/WaterfallView';
-import type { TraceData } from '../components/TraceViewer';
+import type { TraceData } from '../utils/trace-utils';
 
 const mockTrace: TraceData = {
   trace_id: 'trace-001',

@@ -21,7 +21,7 @@ cd tracing
 
 # 方式 A：直接运行
 pip install -e .
-python -m tracing_server                          # 服务端 :9200
+python -m tracing_server                          # 服务端 :9200 (FastAPI 路由已模块化)
 cd tracing-dashboard && npm install && npm run dev # 面板 :9201
 
 # 方式 B：Docker Compose
@@ -114,18 +114,36 @@ Flow (Crew 执行)
 
 ```
 tracing/
-├── tracing_sdk/          # Python SDK (零侵入集成)
-│   ├── collector.py      # Span 缓冲 + HTTP 发送
-│   ├── span.py           # Span 数据模型
-│   └── adapters/         # 框架适配器
-│       └── crewai_adapter.py  # CrewAI 事件钩子
-├── tracing_server/       # FastAPI 服务端
-│   ├── app.py            # REST API + SSE + /metrics
-│   └── store.py          # SQLite 存储 + 成本/分位计算
-├── tracing-dashboard/    # React 前端面板
-│   └── src/components/   # TraceViewer, CostView, ComparisonView...
-├── tests/integration/    # 集成测试
-├── docker-compose.yml    # Docker 一键部署
-├── Dockerfile.server     # 服务端镜像
+├── tracing_sdk/            # Python SDK (零侵入集成)
+│   ├── collector.py        # Span 缓冲 + HTTP 发送 (retry/backoff)
+│   ├── span.py             # Span 数据模型 (SpanKind/SpanStatus)
+│   ├── auto_patch.py       # .pth 自动注入入口
+│   └── adapters/           # 框架适配器 (事件注册表解耦)
+│       ├── crewai_adapter.py  # CrewAI v1.14+ 事件钩子
+│       └── openai_adapter.py  # OpenAI 调用钩子
+├── tracing_server/         # FastAPI 服务端 (模块化路由)
+│   ├── app.py              # App factory + 中间件 + 内建 dashboard (108 行)
+│   ├── store.py            # SQLite 存储 + 分位/成本计算 (654 行)
+│   ├── models.py           # Pydantic 模型 (SpanIngest, SpanOut, StatsResponse...)
+│   ├── auth.py             # API key 认证依赖
+│   ├── storage.py          # StorageBackend 协议 (可插拔存储)
+│   └── routers/            # REST API 路由模块
+│       ├── ingest.py       # POST /spans + 速率限制
+│       ├── query.py        # GET /traces, /stats, /search, /projects
+│       ├── analytics.py    # GET /costs, /errors, /latency-heatmap, /percentiles, /metrics
+│       ├── admin.py        # DELETE /admin/spans, POST /admin/cleanup
+│       ├── share.py        # POST /share, GET /s/{share_id}
+│       └── sse.py          # GET /events + broadcast
+├── tracing-dashboard/      # React 前端面板 (38 组件 + hooks)
+│   └── src/
+│       ├── components/     # TraceViewer, CostView, ErrorPanel, ComparisonView...
+│       ├── hooks/          # useTraces, useEndpoints, useKeyboardNav
+│       └── utils/          # trace-utils, exportPdf
+├── tests/                  # 测试 (127 项)
+│   ├── test_refactor.py    # 71 项 store 层测试
+│   ├── test_api.py         # 26 项 API 层测试
+│   └── integration/        # 集成测试
+├── docker-compose.yml      # Docker 一键部署
+├── Dockerfile.server       # 服务端镜像
 └── pyproject.toml
 ```
