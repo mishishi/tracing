@@ -1,4 +1,13 @@
 import { BarChart3 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 interface ModelBreakdown {
   input_tokens: number;
@@ -18,6 +27,8 @@ const modelLabel: Record<string, string> = {
   'claude-4-opus': 'Claude 4 Opus', 'claude-4-sonnet': 'Claude 4 Sonnet',
   'gemini-2.5-pro': 'Gemini 2.5 Pro', 'gemini-2.5-flash': 'Gemini 2.5 Flash',
   'deepseek-v3': 'DeepSeek V3', 'deepseek-r1': 'DeepSeek R1',
+  'deepseek-chat': 'DeepSeek Chat',
+  'minimax/MiniMax-M2.7-highspeed': 'MiniMax M2.7',
 };
 
 function fmtTokens(n: number): string {
@@ -26,13 +37,55 @@ function fmtTokens(n: number): string {
   return String(n);
 }
 
+interface ChartData {
+  name: string;
+  model: string;
+  input: number;
+  output: number;
+  calls: number;
+}
+
 export function TokenHistogram({ byModel }: TokenHistogramProps) {
   const models = Object.entries(byModel);
   if (models.length === 0) return null;
 
-  const maxTokens = Math.max(...models.map(([, v]) => v.input_tokens + v.output_tokens), 1);
-  const barH = 28;
-  const chartH = models.length * (barH + 8) + 8;
+  const data: ChartData[] = models.map(([model, v]) => ({
+    name: modelLabel[model] || model.split('/').pop() || model,
+    model,
+    input: v.input_tokens,
+    output: v.output_tokens,
+    calls: v.calls,
+  }));
+
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean;
+    payload?: Array<{ name: string; value: number }>;
+    label?: string;
+  }) => {
+    if (!active || !payload) return null;
+    const item = data.find((d) => d.name === label);
+    return (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg text-xs">
+        <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-sm bg-indigo-400" />
+            <span className="text-gray-500 dark:text-gray-400">输入</span>
+            <span className="text-gray-700 dark:text-gray-200 font-mono ml-auto">{fmtTokens(item?.input || 0)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-sm bg-emerald-400" />
+            <span className="text-gray-500 dark:text-gray-400">输出</span>
+            <span className="text-gray-700 dark:text-gray-200 font-mono ml-auto">{fmtTokens(item?.output || 0)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 dark:text-gray-400">调用</span>
+            <span className="text-gray-700 dark:text-gray-200 font-mono ml-auto">{item?.calls || 0} 次</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="bento">
@@ -41,46 +94,38 @@ export function TokenHistogram({ byModel }: TokenHistogramProps) {
         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Token 分布</h4>
       </div>
 
-      <svg viewBox={`0 0 500 ${chartH}`} className="w-full" style={{ minWidth: 300 }}>
-        {models.map(([model, v], i) => {
-          const y = i * (barH + 8) + 4;
-          const total = v.input_tokens + v.output_tokens;
-          const inputW = (v.input_tokens / maxTokens) * 350;
-          const outputW = (v.output_tokens / maxTokens) * 350;
-          const label = modelLabel[model] || model;
-
-          return (
-            <g key={model}>
-              {/* Label */}
-              <text x={0} y={y + barH / 2 + 4} className="text-[10px] fill-gray-500" fontFamily="Inter" textAnchor="end" width="100">
-                <tspan x="100" dy="0">{label}</tspan>
-              </text>
-
-              {/* Input token bar */}
-              <rect x={108} y={y} width={inputW} height={barH / 2 - 1} rx="2" fill="#818cf8" opacity="0.8" />
-
-              {/* Output token bar */}
-              <rect x={108} y={y + barH / 2 + 1} width={outputW} height={barH / 2 - 1} rx="2" fill="#34d399" opacity="0.8" />
-
-              {/* Count label */}
-              <text x={108 + Math.max(inputW, outputW) + 8} y={y + barH / 2 + 4} className="text-[9px] fill-gray-400" fontFamily="JetBrains Mono">
-                {fmtTokens(total)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Legend */}
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-indigo-400 opacity-80" />
-          <span className="text-[10px] text-gray-400">输入</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-emerald-400 opacity-80" />
-          <span className="text-[10px] text-gray-400">输出</span>
-        </div>
+      <div className="w-full" style={{ minHeight: Math.max(data.length * 36, 120) }}>
+        <ResponsiveContainer width="100%" height={Math.max(data.length * 40, 140)}>
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ top: 0, right: 20, bottom: 0, left: 0 }}
+          >
+            <XAxis
+              type="number"
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickFormatter={fmtTokens}
+              axisLine={{ stroke: '#e5e7eb' }}
+              tickLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fontSize: 11, fill: '#6b7280' }}
+              axisLine={false}
+              tickLine={false}
+              width={110}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(129, 140, 248, 0.06)' }} />
+            <Legend
+              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+              iconType="square"
+              iconSize={8}
+            />
+            <Bar dataKey="input" name="输入" stackId="tokens" fill="#818cf8" barSize={16} radius={[0, 0, 4, 4]} />
+            <Bar dataKey="output" name="输出" stackId="tokens" fill="#34d399" barSize={16} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
