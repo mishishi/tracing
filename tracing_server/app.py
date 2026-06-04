@@ -1,13 +1,30 @@
 """Tracing server - FastAPI REST API for span ingestion and query."""
 
+import os
+
+# ── API Key Auth ──────────────────────────────
+API_KEY = os.environ.get("TRACING_API_KEY", "").strip()
+
+async def _require_api_key(request: Request):
+    """FastAPI dependency: require API key for write endpoints. If no key
+    is configured (empty string), all requests are allowed."""
+    if not API_KEY:
+        return
+    key = request.headers.get("X-API-Key", "")
+    if key == API_KEY:
+        return
+    key = request.query_params.get("api_key", "")
+    if key == API_KEY:
+        return
+    raise HTTPException(status_code=401, detail="Missing or invalid API key")
+
 import json
 import asyncio
 import time
-import os
 from typing import AsyncGenerator
 from collections import defaultdict
 
-from fastapi import FastAPI, Query, Body, HTTPException
+from fastapi import FastAPI, Query, Body, HTTPException, Request, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -125,7 +142,7 @@ async def shutdown():
 # ── REST ────────────────────────────────────────
 
 @app.post("/spans")
-async def ingest_spans(spans: list[dict]):
+async def ingest_spans(spans: list[dict], _auth=Depends(_require_api_key)):
     if not _check_rate("ingest"):
         from fastapi.responses import JSONResponse
         return JSONResponse({"error": "rate limit exceeded"}, status_code=429)
@@ -251,16 +268,82 @@ async def projects():
 
 
 @app.delete("/admin/spans")
-async def admin_delete_spans(
+async def admin_delete_spans(_auth=Depends(_require_api_key),
+
     project: str = Query(default=""),
     before_days: int = Query(default=0, le=365),
 ):
     return delete_spans(project=project, before_days=before_days)
 
 @app.post("/admin/cleanup")
-async def admin_cleanup(retention_days: int = Query(default=30, le=365)):
+async def admin_cleanup(retention_days: int = Query(default=30, le=365), _auth=Depends(_require_api_key)):
     deleted = cleanup_old_traces(retention_days=retention_days)
     return {"ok": True, "deleted_traces": deleted, "retention_days": retention_days}
+
+# ── Prometheus Metrics ─────────────────────────
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus-compatible metrics endpoint."""
+    import sqlite3
+    from collections import defaultdict
+    from .store import _conn
+
+    lines = []
+
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+
+        rows = db.execute(
+            "SELECT project, kind, COUNT(*) as cnt FROM spans GROUP BY project, kind"
+        ).fetchall()
+        for r in rows:
+            lines.append(
+                f'tracing_spans_ingested_total{{project="{r["project"]}",kind="{r["kind"]}"}} {r["cnt"]}'
+            )
+
+        rows = db.execute(
+            "SELECT project, kind, COUNT(*) as cnt FROM spans WHERE status='error' GROUP BY project, kind"
+        ).fetchall()
+        for r in rows:
+            lines.append(
+                f'tracing_spans_errors_total{{project="{r["project"]}",kind="{r["kind"]}"}} {r["cnt"]}'
+            )
+
+        kind_durations = defaultdict(list)
+        rows = db.execute(
+            "SELECT kind, duration_ms FROM spans WHERE duration_ms > 0"
+        ).fetchall()
+        for r in rows:
+            kind_durations[r["kind"]].append(r["duration_ms"])
+
+        for kind, durations in kind_durations.items():
+            if not durations:
+                continue
+            durations.sort()
+            n = len(durations)
+            p50 = durations[int(n * 0.50)] if n > 0 else 0
+            p95 = durations[min(int(n * 0.95), n - 1)] if n > 0 else 0
+            p99 = durations[min(int(n * 0.99), n - 1)] if n > 0 else 0
+            lines.append(f'tracing_span_duration_ms{{kind="{kind}",quantile="p50"}} {p50:.1f}')
+            lines.append(f'tracing_span_duration_ms{{kind="{kind}",quantile="p95"}} {p95:.1f}')
+            lines.append(f'tracing_span_duration_ms{{kind="{kind}",quantile="p99"}} {p99:.1f}')
+
+    lines.append(f"tracing_active_sse_connections {len(sse_queues)}")
+
+    help_text = (
+        "# HELP tracing_spans_ingested_total Total spans ingested\n"
+        "# TYPE tracing_spans_ingested_total counter\n"
+        "# HELP tracing_spans_errors_total Total spans with errors\n"
+        "# TYPE tracing_spans_errors_total counter\n"
+        "# HELP tracing_span_duration_ms Span duration in milliseconds\n"
+        "# TYPE tracing_span_duration_ms gauge\n"
+        "# HELP tracing_active_sse_connections Active SSE connections\n"
+        "# TYPE tracing_active_sse_connections gauge\n"
+    )
+
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(help_text + "\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
 
 # ── Built-in dashboard ──────────────────────────
 

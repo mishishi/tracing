@@ -27,6 +27,7 @@ def _check_health(endpoint: str, timeout: float = 2.0) -> bool:
 _HEALTH_CHECKED = False
 
 _ENDPOINT = os.environ.get("TRACING_ENDPOINT", "http://localhost:9200")
+_API_KEY = os.environ.get("TRACING_API_KEY", "")
 _BUFFER: list[dict] = []
 _LOCK = threading.Lock()
 _FLUSH_INTERVAL = float(os.environ.get("TRACING_FLUSH_INTERVAL", "2.0"))
@@ -50,12 +51,17 @@ def _flush():
 
     try:
         data = json.dumps(batch).encode("utf-8")
+        url = f"{_ENDPOINT}/spans"
+        if _API_KEY:
+            url += f"?api_key={_API_KEY}"
         req = urllib.request.Request(
-            f"{_ENDPOINT}/spans",
+            url,
             data=data,
             headers={"Content-Type": "application/json"},
             method="POST",
         )
+        if _API_KEY:
+            req.add_header("X-API-Key", _API_KEY)
         urllib.request.urlopen(req, timeout=5)
     except Exception as e:
         logger.warning(f"Flush failed ({len(batch)} spans): {e}")

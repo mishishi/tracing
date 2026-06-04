@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "9200:9200"
+    volumes:
+      - tracing_data:/data
+    environment:
+      - TRACING_DB_PATH=/data/traces.db
+      - TRACING_API_KEY=${TRACING_API_KEY:-}
+      - TRACING_RETENTION_DAYS=30
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9200/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  dashboard:
+    build:
+      context: ./tracing-dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "9201:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  tracing_data:
