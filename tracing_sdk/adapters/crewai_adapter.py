@@ -20,6 +20,7 @@ def _log(msg: str, *args, level: str = "debug"):
 
 # ── Span tracking ──
 _llm_stack: list[Span] = []
+_tool_stack: list[Span] = []
 _flow_span: Span | None = None
 _agent_span: Span | None = None
 
@@ -127,6 +128,7 @@ def _patch_crewai():
         global _flow_span, _agent_span
         _log("CREW_COMPLETED")
         try:
+            _flush_pending_tools()
             # Finish last agent if still running
             if _agent_span and _agent_span.status == SpanStatus.RUNNING:
                 _agent_span.finish(SpanStatus.OK)
@@ -144,6 +146,7 @@ def _patch_crewai():
         global _flow_span, _agent_span
         _log("CREW_FAILED")
         try:
+            _flush_pending_tools()
             if _agent_span and _agent_span.status == SpanStatus.RUNNING:
                 _agent_span.finish(SpanStatus.ERROR)
                 send(_agent_span)
@@ -190,6 +193,7 @@ def _patch_crewai():
         global _agent_span
         _log("AGENT_COMPLETED")
         try:
+            _flush_pending_tools()
             if _agent_span and _agent_span.status == SpanStatus.RUNNING:
                 _agent_span.finish(SpanStatus.OK)
                 send(_agent_span)
@@ -202,6 +206,7 @@ def _patch_crewai():
         global _agent_span
         _log("AGENT_ERROR")
         try:
+            _flush_pending_tools()
             if _agent_span:
                 _agent_span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
                 send(_agent_span)
@@ -308,12 +313,21 @@ def _patch_crewai():
         except Exception as e:
             _log("LLM_FAILED err: " + str(e))
 
-    # ── Tool calls (children of current agent) ──
+    # ── Tool calls (children of current agent, paired start/finish) ──
 
-    @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def _on_tool_usage(source, event):
+    def _flush_pending_tools():
+        """Send any unfinished tool spans (called on agent/crew complete)."""
+        global _tool_stack
+        while _tool_stack:
+            span = _tool_stack.pop()
+            if span.status == SpanStatus.RUNNING:
+                span.finish(SpanStatus.OK)
+            send(span)
+
+    @crewai_event_bus.on(ToolUsageStartedEvent)
+    def _on_tool_started(source, event):
         tool_name = getattr(event, "tool_name", "") or "unknown_tool"
-        _log("TOOL: " + tool_name)
+        _log("TOOL_START: " + tool_name)
         try:
             span = Span(kind=SpanKind.TOOL_CALL, name=tool_name)
             span.metadata["agent"] = _current_agent
@@ -328,21 +342,52 @@ def _patch_crewai():
             if args:
                 span.metadata["tool_input"] = str(args)[:500]
             span.start()
+            _tool_stack.append(span)
+        except Exception as e:
+            _log("TOOL_START err: " + str(e))
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def _on_tool_finished(source, event):
+        tool_name = getattr(event, "tool_name", "") or "unknown_tool"
+        _log("TOOL_END: " + tool_name)
+        try:
+            if _tool_stack:
+                span = _tool_stack.pop()
+            else:
+                # No matching start event — create best-effort span
+                span = Span(kind=SpanKind.TOOL_CALL, name=tool_name)
+                if _agent_span:
+                    span.parent_id = _agent_span.id
+                    span.trace_id = _agent_span.trace_id
+                elif _flow_span:
+                    span.trace_id = _flow_span.trace_id
+                span.start()
+            # Fill in output from finished event
+            result = getattr(event, "result", None) or getattr(event, "output", None)
+            if result:
+                span.metadata["tool_output"] = str(result)[:500]
             span.finish(SpanStatus.OK)
             send(span)
+            _log("TOOL_END sent duration=" + str(round(span.duration_ms)) + "ms")
         except Exception as e:
-            _log("TOOL err: " + str(e))
+            _log("TOOL_END err: " + str(e))
 
     @crewai_event_bus.on(ToolUsageErrorEvent)
     def _on_tool_error(source, event):
         _log("TOOL_ERROR")
         try:
-            span = Span(kind=SpanKind.TOOL_CALL, name="tool_error")
-            if _agent_span:
-                span.parent_id = _agent_span.id
-                span.trace_id = _agent_span.trace_id
-            span.start()
-            span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
+            if _tool_stack:
+                span = _tool_stack.pop()
+                span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
+            else:
+                span = Span(kind=SpanKind.TOOL_CALL, name="tool_error")
+                if _agent_span:
+                    span.parent_id = _agent_span.id
+                    span.trace_id = _agent_span.trace_id
+                elif _flow_span:
+                    span.trace_id = _flow_span.trace_id
+                span.start()
+                span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
             send(span)
         except Exception as e:
             _log("TOOL_ERROR err: " + str(e))
