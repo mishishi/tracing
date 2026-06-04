@@ -161,6 +161,38 @@ def cleanup_old_traces(retention_days: int = 30):
         return 0
 
 
+
+def _compute_percentiles(vals: list[float]) -> dict:
+    """Compute P50/P95/P99/avg/count from a sorted list of durations.
+    
+    Uses linear interpolation for more accurate percentile values.
+    """
+    n = len(vals)
+    if n == 0:
+        return {"p50": 0, "p95": 0, "p99": 0, "avg": 0, "count": 0}
+    if not vals:
+        return {"p50": 0, "p95": 0, "p99": 0, "avg": 0, "count": 0}
+    
+    sorted_vals = sorted(vals)
+    
+    def _pct(p: float) -> float:
+        if n == 1:
+            return sorted_vals[0]
+        k = (n - 1) * p
+        f = int(k)
+        c = k - f
+        if f + 1 >= n:
+            return sorted_vals[-1]
+        return round(sorted_vals[f] + c * (sorted_vals[f + 1] - sorted_vals[f]), 1)
+    
+    return {
+        "p50": _pct(0.50),
+        "p95": _pct(0.95),
+        "p99": _pct(0.99),
+        "avg": round(sum(sorted_vals) / n, 1),
+        "count": n,
+    }
+
 def get_percentiles(project: str = "") -> dict:
     """Get p50, p95, p99 duration percentiles for LLM, tool, and agent calls."""
     with _conn() as db:
@@ -174,18 +206,8 @@ def get_percentiles(project: str = "") -> dict:
                 f"ORDER BY duration_ms",
                 (kind_filter,) + params
             ).fetchall()
-            if not rows:
-                return {"p50": 0, "p95": 0, "p99": 0, "avg": 0, "count": 0}
             vals = [r["duration_ms"] for r in rows]
-            vals.sort()
-            n = len(vals)
-            return {
-                "p50": vals[int(n * 0.50)],
-                "p95": vals[min(int(n * 0.95), n - 1)],
-                "p99": vals[min(int(n * 0.99), n - 1)],
-                "avg": round(sum(vals) / n, 1),
-                "count": n,
-            }
+            return _compute_percentiles(vals)
 
         return {
             "llm_call": _pct("llm_call"),
@@ -541,6 +563,8 @@ def cleanup_expired_shares() -> int:
 def get_percentiles_trend(project: str = "", days: int = 30) -> dict:
     """Get daily P50/P95/P99 trends by kind for the last N days."""
     import sqlite3
+    from collections import defaultdict
+
     with _conn() as db:
         db.row_factory = sqlite3.Row
 
@@ -559,46 +583,19 @@ def get_percentiles_trend(project: str = "", days: int = 30) -> dict:
             params
         ).fetchall()
 
-        # Group by (kind, day) and compute percentiles
-        from collections import defaultdict
         groups: dict = defaultdict(list)
         for r in rows:
             groups[(r["kind"], r["day"])].append(r["duration_ms"])
 
-        # Build result: { kind: [{ day, p50, p95, p99, avg, count }] }
-        from collections import OrderedDict
-        
-        def _percentile(sorted_vals: list, p: float) -> float:
-            """Linear interpolation percentile (like numpy)."""
-            n = len(sorted_vals)
-            if n == 0:
-                return 0
-            if n == 1:
-                return sorted_vals[0]
-            k = (n - 1) * p
-            f = int(k)
-            c = k - f
-            if f + 1 >= n:
-                return sorted_vals[-1]
-            return sorted_vals[f] + c * (sorted_vals[f + 1] - sorted_vals[f])
-        
         result: dict = {}
         for kind in ["agent", "llm_call", "tool_call"]:
             day_data: list = []
-            # Get all unique days for this kind
             kind_days = sorted(set(k[1] for k in groups if k[0] == kind))
             for day in kind_days:
                 vals = groups[(kind, day)]
-                vals.sort()
-                n = len(vals)
-                day_data.append({
-                    "day": day,
-                    "p50": round(_percentile(vals, 0.50), 1),
-                    "p95": round(_percentile(vals, 0.95), 1),
-                    "p99": round(_percentile(vals, 0.99), 1),
-                    "avg": round(sum(vals) / n, 1),
-                    "count": n,
-                })
+                stats = _compute_percentiles(vals)
+                stats["day"] = day
+                day_data.append(stats)
             result[kind] = day_data
 
         return {
@@ -652,3 +649,32 @@ def search_spans(query: str, project: str = "", limit: int = 50) -> list[dict]:
 init_db()
 init_shares_table()
 
+
+
+# ── StorageBackend adapter ────────────────────
+
+class SQLiteBackend:
+    """Adapter that wraps module-level store functions as a StorageBackend.
+    
+    Usage:
+        from tracing_server.store import SQLiteBackend
+        backend = SQLiteBackend()
+        backend.insert_spans([...])
+    """
+    
+    insert_spans = staticmethod(_insert_spans)
+    get_trace = staticmethod(get_trace)
+    list_traces = staticmethod(list_traces)
+    get_stats = staticmethod(get_stats)
+    get_project_list = staticmethod(get_project_list)
+    get_costs = staticmethod(get_costs)
+    get_error_stats = staticmethod(get_error_stats)
+    get_latency_heatmap = staticmethod(get_latency_heatmap)
+    get_percentiles = staticmethod(get_percentiles)
+    get_percentiles_trend = staticmethod(get_percentiles_trend)
+    search_spans = staticmethod(search_spans)
+    delete_spans = staticmethod(delete_spans)
+    cleanup_old_traces = staticmethod(cleanup_old_traces)
+    create_share = staticmethod(create_share)
+    get_share = staticmethod(get_share)
+    cleanup_expired_shares = staticmethod(cleanup_expired_shares)

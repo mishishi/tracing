@@ -2,7 +2,6 @@
 Creates Flow > Agent > LLM/Tool span hierarchy."""
 
 import logging
-from pathlib import Path
 from ..span import Span, SpanKind, SpanStatus
 from ..collector import send
 import re
@@ -10,16 +9,14 @@ import uuid
 
 logger = logging.getLogger("tracing.crewai")
 
-_debug = Path.home() / ".tracing" / "adapter.log"
-_debug.parent.mkdir(parents=True, exist_ok=True)
-
-def _log(msg: str):
-    try:
-        with open(_debug, "a", encoding="utf-8") as f:
-            from datetime import datetime
-            f.write(datetime.now().isoformat() + " " + msg + "\n")
-    except Exception:
-        pass
+def _log(msg: str, *args, level: str = "debug"):
+    """Structured logging via standard logging module."""
+    if level == "error":
+        logger.error(msg, *args)
+    elif level == "warning":
+        logger.warning(msg, *args)
+    else:
+        logger.debug(msg, *args)
 
 # ── Span tracking ──
 _llm_stack: list[Span] = []
@@ -33,6 +30,44 @@ _current_task: str = ""
 _patched = False
 
 
+# ── Event type resolution (version-agnostic) ──
+
+def _resolve_crewai_events():
+    """Try to import CrewAI event classes across versions.
+    
+    Returns dict mapping event names to type classes, or empty dict if unavailable.
+    """
+    event_paths = [
+        # v1.14.x+ event layout
+        {
+            "CrewKickoffStartedEvent": "crewai.events.types.crew_events",
+            "CrewKickoffCompletedEvent": "crewai.events.types.crew_events",
+            "CrewKickoffFailedEvent": "crewai.events.types.crew_events",
+            "AgentExecutionStartedEvent": "crewai.events.types.agent_events",
+            "AgentExecutionCompletedEvent": "crewai.events.types.agent_events",
+            "AgentExecutionErrorEvent": "crewai.events.types.agent_events",
+            "TaskStartedEvent": "crewai.events.types.task_events",
+            "TaskCompletedEvent": "crewai.events.types.task_events",
+            "LLMCallStartedEvent": "crewai.events.types.llm_events",
+            "LLMCallCompletedEvent": "crewai.events.types.llm_events",
+            "LLMCallFailedEvent": "crewai.events.types.llm_events",
+            "ToolUsageEvent": "crewai.events.types.tool_usage_events",
+            "ToolUsageErrorEvent": "crewai.events.types.tool_usage_events",
+        },
+    ]
+    
+    for mapping in event_paths:
+        try:
+            resolved = {}
+            for name, module_path in mapping.items():
+                mod = __import__(module_path, fromlist=[name])
+                resolved[name] = getattr(mod, name)
+            return resolved
+        except (ImportError, AttributeError):
+            continue
+    
+    return {}
+
 def _patch_crewai():
     global _patched
     if _patched:
@@ -41,34 +76,32 @@ def _patch_crewai():
     _log("adapter: starting patch")
 
     # ── Imports ──
+    # Resolve event types (supports multiple CrewAI versions)
+    events = _resolve_crewai_events()
+    if not events:
+        _log("adapter: no CrewAI events resolved — skipping", level="warning")
+        return
+
     try:
         from crewai.events.event_bus import crewai_event_bus
-        from crewai.events.types.llm_events import (
-            LLMCallStartedEvent,
-            LLMCallCompletedEvent,
-            LLMCallFailedEvent,
-        )
-        from crewai.events.types.tool_usage_events import (
-            ToolUsageEvent,
-            ToolUsageErrorEvent,
-        )
-        from crewai.events.types.agent_events import (
-            AgentExecutionStartedEvent,
-            AgentExecutionCompletedEvent,
-            AgentExecutionErrorEvent,
-        )
-        from crewai.events.types.task_events import (
-            TaskStartedEvent,
-            TaskCompletedEvent,
-        )
-        from crewai.events.types.crew_events import (
-            CrewKickoffStartedEvent,
-            CrewKickoffCompletedEvent,
-            CrewKickoffFailedEvent,
-        )
     except ImportError as e:
-        _log("adapter: import failed: " + str(e))
+        _log("adapter: event_bus import failed: " + str(e))
         return
+
+    # Unpack resolved event types for handler decorators
+    CrewKickoffStartedEvent = events["CrewKickoffStartedEvent"]
+    CrewKickoffCompletedEvent = events["CrewKickoffCompletedEvent"]
+    CrewKickoffFailedEvent = events["CrewKickoffFailedEvent"]
+    AgentExecutionStartedEvent = events["AgentExecutionStartedEvent"]
+    AgentExecutionCompletedEvent = events["AgentExecutionCompletedEvent"]
+    AgentExecutionErrorEvent = events["AgentExecutionErrorEvent"]
+    TaskStartedEvent = events["TaskStartedEvent"]
+    TaskCompletedEvent = events["TaskCompletedEvent"]
+    LLMCallStartedEvent = events["LLMCallStartedEvent"]
+    LLMCallCompletedEvent = events["LLMCallCompletedEvent"]
+    LLMCallFailedEvent = events["LLMCallFailedEvent"]
+    ToolUsageEvent = events["ToolUsageEvent"]
+    ToolUsageErrorEvent = events["ToolUsageErrorEvent"]
 
     _log("adapter: imports ok")
 
