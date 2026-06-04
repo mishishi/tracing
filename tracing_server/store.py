@@ -436,7 +436,7 @@ def get_latency_heatmap(project: str = "", days: int = 7) -> dict:
             params.append(f'-{days} days')
 
         rows = db.execute(
-            f"SELECT kind, CAST(strftime('%H', start_time) AS INTEGER) as hour, "
+            f"SELECT kind, CAST(strftime('%H', start_time, 'localtime') AS INTEGER) as hour, "
             f"AVG(duration_ms) as avg_ms, COUNT(*) as cnt "
             f"FROM spans {where} "
             f"GROUP BY kind, hour ORDER BY kind, hour",
