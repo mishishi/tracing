@@ -43,6 +43,7 @@ import { ErrorPanel } from './components/ErrorPanel';
 import { LatencyHeatmap } from './components/LatencyHeatmap';
 import { PercentileTrend } from './components/PercentileTrend';
 import { ComparisonView } from './components/ComparisonView';
+import { Overview } from './components/Overview';
 import { SearchBar } from './components/SearchBar';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
 import { exportToPdf } from './utils/exportPdf';
@@ -142,7 +143,8 @@ function AppInner() {
   });
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'traces' | 'costs' | 'errors' | 'compare'>('traces');
+  const [activeTab, setActiveTab] = useState<'overview' | 'traces' | 'costs' | 'errors' | 'compare'>('overview');
+  const [globalProject, setGlobalProject] = useState('');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sharedTraceId, setSharedTraceId] = useState('');
   const [density, setDensity] = useState<'comfortable' | 'compact'>(() => {
@@ -433,6 +435,18 @@ function AppInner() {
         {/* Tab Navigation */}
         <div className="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
           <button
+            onClick={() => setActiveTab('overview')}
+            className={
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ' +
+              (activeTab === 'overview'
+                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300')
+            }
+          >
+            <Layers className="w-4 h-4" />
+            总览
+          </button>
+          <button
             onClick={() => setActiveTab('traces')}
             className={
               'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ' +
@@ -482,10 +496,13 @@ function AppInner() {
           </button>
         </div>
 
+        {activeTab === 'overview' && (
+          <Overview endpoint={endpoint} onProjectSelect={(project) => { setGlobalProject(project); setActiveTab('traces'); }} />
+        )}
         {activeTab === 'traces' && (
           <div className="space-y-6">
-            <LatencyHeatmap endpoint={endpoint} />
-            <PercentileTrend endpoint={endpoint} />
+            <LatencyHeatmap endpoint={endpoint} project={globalProject} />
+            <PercentileTrend endpoint={endpoint} project={globalProject} />
             <TraceViewer endpoint={endpoint} initialTraceId={sharedTraceId} />
           </div>
         )}
