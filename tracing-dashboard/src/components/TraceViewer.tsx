@@ -9,6 +9,7 @@ import {
 import { Dropdown } from './Dropdown';
 import { WaterfallView } from './WaterfallView';
 import { SpanDetailPanel } from './SpanDetailPanel';
+import { TimelineView } from './TimelineView';
 import { SkeletonTraceList } from './Skeleton';
 
 export interface SpanMeta {
@@ -125,7 +126,7 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
   const [projectFilter, setProjectFilter] = useState('');
   const [projects, setProjects] = useState<string[]>([]);
   const [allExpanded, setAllExpanded] = useState(true);
-  const [viewMode, setViewMode] = useState<'list' | 'waterfall'>('waterfall');
+  const [viewMode, setViewMode] = useState<'list' | 'waterfall' | 'timeline'>('waterfall');
   const [timeRange, setTimeRange] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
