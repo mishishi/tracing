@@ -22,6 +22,7 @@ DEFAULT_LOG_CONFIG = {
             "datefmt": "%m-%d %H:%M:%S",
         },
         "access": {
+            "()": "uvicorn.logging.AccessFormatter",
             "format": '%(asctime)s %(levelname)-5s %(client_addr)s - "%(request_line)s" %(status_code)s',
             "datefmt": "%m-%d %H:%M:%S",
         },
