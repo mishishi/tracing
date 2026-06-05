@@ -1,5 +1,5 @@
-import { X, Copy, CheckCircle2, Zap, Wrench, Cpu, Clock, Layers } from 'lucide-react';
-import { useState } from 'react';
+import { X, Copy, CheckCircle2, Zap, Wrench, Cpu, Clock, Layers, Tag, MessageSquare, Star, Edit3, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import type { Span } from '../utils/trace-utils';
 import { JsonBlock } from './JsonBlock';
 
@@ -39,11 +39,38 @@ interface SpanDetailPanelProps {
 export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
   const [copied, setCopied] = useState(false);
 
+  const [editing, setEditing] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [notesInput, setNotesInput] = useState('');
+  const [localTags, setLocalTags] = useState<Record<string, string>>({});
+  const [rating, setRating] = useState<number>(0);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const tags = span.metadata.tags || {};
+    setLocalTags(tags);
+    setRating(Number(tags.rating) || 0);
+    setNotesInput('');
+  }, [span.id]);
+
   const copyJson = () => {
     navigator.clipboard.writeText(JSON.stringify(span, null, 2)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {});
+  };
+
+  const saveAnnotation = () => {
+    setSaving(true);
+    const endpoint = span.id ? '/spans/' + span.id : '';
+    // Infer endpoint from window location if possible
+    const base = window.location.hostname === 'localhost' ? 'http://localhost:9200' : '';
+    fetch(base + endpoint, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: { ...localTags, rating: String(rating) }, notes: notesInput || undefined }),
+    }).finally(() => setSaving(false));
+    setEditing(false);
   };
 
   const { metadata } = span;
@@ -204,21 +231,96 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
           </section>
         )}
 
-        {/* Tags */}
-        {metadata.tags && Object.keys(metadata.tags).length > 0 && (
-          <section>
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              标签
-            </h4>
-            <div className="flex flex-wrap gap-1.5">
-              {Object.entries(metadata.tags).map(([k, v]) => (
-                <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
-                  {k}: {v}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Tags & Annotations */}
+        <section>
+          <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <Tag className="w-3 h-3" />标注
+          </h4>
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
+            {!editing ? (
+              <>
+                {/* Display tags */}
+                <div className="flex flex-wrap gap-1.5">
+                  {rating > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+                      <Star className="w-2.5 h-2.5 fill-current" /> {rating}/5
+                    </span>
+                  )}
+                  {Object.entries(localTags).filter(([k]) => k !== 'rating').map(([k, v]) => (
+                    <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                      {k}: {v}
+                    </span>
+                  ))}
+                  {Object.keys(localTags).length === 0 && !rating && (
+                    <span className="text-gray-400">暂无标注</span>
+                  )}
+                </div>
+                <button onClick={() => setEditing(true)}
+                  className="flex items-center gap-1 text-[10px] text-indigo-500 hover:text-indigo-600 transition-colors">
+                  <Edit3 className="w-3 h-3" /> 编辑标注
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Rating */}
+                <div>
+                  <label className="text-[10px] text-gray-400 mb-1 block">评分</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button key={n} onClick={() => setRating(n)}
+                        className={'p-0.5 transition-colors ' + (n <= rating ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600')}>
+                        <Star className={'w-4 h-4 ' + (n <= rating ? 'fill-current' : '')} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Tags input */}
+                <div>
+                  <label className="text-[10px] text-gray-400 mb-1 block">标签 (key:value, 逗号分隔)</label>
+                  <input type="text" value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    placeholder="bug, priority:high"
+                    className="w-full px-2 py-1 text-xs rounded border bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:ring-1 focus:ring-indigo-500/30" />
+                </div>
+                {/* Notes */}
+                <div>
+                  <label className="text-[10px] text-gray-400 mb-1 block">备注</label>
+                  <textarea value={notesInput}
+                    onChange={(e) => setNotesInput(e.target.value)}
+                    placeholder="添加备注..."
+                    rows={2}
+                    className="w-full px-2 py-1 text-xs rounded border bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus:ring-1 focus:ring-indigo-500/30 resize-none" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    // Parse tag input: "bug, priority:high" → { bug: "true" or "", priority: "high" }
+                    const parsed: Record<string, string> = {};
+                    if (tagInput.trim()) {
+                      tagInput.split(',').forEach((part) => {
+                        const [k, ...v] = part.trim().split(':');
+                        parsed[k.trim()] = v.length ? v.join(':').trim() : 'true';
+                      });
+                    }
+                    setLocalTags({ ...localTags, ...parsed });
+                    setTagInput('');
+                  }}
+                    className="text-[10px] text-indigo-500 hover:text-indigo-600">添加标签</button>
+                  <button onClick={() => {
+                    setLocalTags({});
+                    setRating(0);
+                    setTagInput('');
+                    setNotesInput('');
+                  }}
+                    className="text-[10px] text-gray-400 hover:text-red-500 ml-auto">清除</button>
+                  <button onClick={saveAnnotation} disabled={saving}
+                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors">
+                    <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
 
         {/* Error */}
         {span.error && (

@@ -43,6 +43,9 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
   const [copied, setCopied] = useState(false);
   const [showList, setShowList] = useState(true);
   const [shareUrl, setShareUrl] = useState('');
+  const [viewGroupBy, setViewGroupBy] = useState<'trace' | 'session'>('trace');
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
 
   const toggle = (id: string) => setExpanded((p) => {
     const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n;
@@ -110,6 +113,17 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
 
   useKeyboardNav({ selected, filteredTraces, setSelected, setSelectedSpanId, loadTrace });
 
+  // Fetch sessions
+  useEffect(() => {
+    if (viewGroupBy !== 'session') return;
+    setSessionsLoading(true);
+    fetch(endpoint + '/sessions?project=' + (projectFilter || '') + '&limit=50')
+      .then((r) => r.json())
+      .then((d) => setSessions(d.sessions || []))
+      .catch(() => {})
+      .finally(() => setSessionsLoading(false));
+  }, [viewGroupBy, endpoint, projectFilter, loadingList]);
+
   // Deep link
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -166,9 +180,21 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
       <div className={`w-full lg:w-80 shrink-0 flex-col gap-3 min-h-0 ${showList ? 'flex' : 'hidden lg:flex'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              追踪列表 {filteredTraces.length > 0 && `(${filteredTraces.length})`}
-            </h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {viewGroupBy === 'trace' ? `追踪列表 ${filteredTraces.length > 0 ? `(${filteredTraces.length})` : ''}` : `会话 ${sessions.length > 0 ? `(${sessions.length})` : ''}`}
+              </h2>
+              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg ml-1">
+                <button onClick={() => setViewGroupBy('trace')}
+                  className={'px-1.5 py-0.5 text-[9px] rounded ' + (viewGroupBy === 'trace' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
+                  追踪
+                </button>
+                <button onClick={() => setViewGroupBy('session')}
+                  className={'px-1.5 py-0.5 text-[9px] rounded ' + (viewGroupBy === 'session' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
+                  会话
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => setShowList(!showList)}
               className="lg:hidden p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
@@ -272,6 +298,48 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
           </div>
         )}
       </div>
+
+      {viewGroupBy === 'session' && (
+        <div className="flex-1 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 min-h-0">
+          {sessionsLoading ? <SkeletonTraceList /> : sessions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Layers className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
+              <p className="text-sm text-gray-400">暂无会话记录</p>
+            </div>
+          ) : (
+            sessions.map((s: any) => (
+              <button
+                key={s.session_id}
+                onClick={() => {
+                  setViewGroupBy('trace');
+                  // Auto-select first trace of this session
+                  const stid = s.session_id;
+                  if (stid) loadTrace(stid);
+                }}
+                className="w-full text-left px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate max-w-[160px]">
+                    {s.session_id.slice(0, 16)}
+                  </span>
+                  <span className="text-[10px] text-gray-400">{s.trace_count || 0} 个追踪</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] text-gray-400">{s.span_count || 0} spans</span>
+                  {s.project && s.project !== 'default' && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                      {s.project}
+                    </span>
+                  )}
+                  {s.error_count > 0 && (
+                    <span className="text-[9px] text-red-500">{s.error_count} 错误</span>
+                  )}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
 
       {/* ── Right panel: detail ── */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">

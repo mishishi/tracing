@@ -661,6 +661,61 @@ init_shares_table()
 
 
 
+def update_span(span_id: str, tags: dict | None = None, notes: str | None = None) -> bool:
+    """Update span tags and/or notes. Returns True if span found."""
+    import json
+    with _conn() as db:
+        if tags is not None:
+            db.execute(
+                "UPDATE spans SET tags = ? WHERE id = ?",
+                (json.dumps(tags, ensure_ascii=False), span_id)
+            )
+        if notes is not None:
+            db.execute(
+                "UPDATE spans SET error = ? WHERE id = ?",
+                (notes, span_id)
+            )
+        db.commit()
+        return db.total_changes > 0
+
+
+def get_sessions(project: str = "", limit: int = 50) -> list[dict]:
+    """Get session summaries grouped by session_id."""
+    with _conn() as db:
+        db.row_factory = __import__("sqlite3").Row
+        where = "WHERE session_id != ''"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        params.append(limit)
+        rows = db.execute(
+            f"SELECT session_id, project, "
+            f"MIN(start_time) as first_time, MAX(end_time) as last_time, "
+            f"COUNT(*) as span_count, COUNT(DISTINCT trace_id) as trace_count, "
+            f"SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as error_count, "
+            f"SUM(duration_ms) as total_duration_ms "
+            f"FROM spans {where} "
+            f"GROUP BY session_id ORDER BY first_time DESC LIMIT ?",
+            params
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_session_traces(session_id: str) -> list[str]:
+    """Get all trace_ids for a session."""
+    with _conn() as db:
+        rows = db.execute(
+            "SELECT DISTINCT trace_id FROM spans WHERE session_id = ? ORDER BY MIN(start_time)",
+            (session_id,)
+        ).fetchall()
+        return [r[0] for r in rows]
+
+
+# ── Also add span annotation endpoint (notes field) ──
+# We reuse the error column for notes since it's free-text and already indexed.
+# For proper annotations, a future migration could add an annotations table.
+
 # ── StorageBackend adapter ────────────────────
 
 class SQLiteBackend:
