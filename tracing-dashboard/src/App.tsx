@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider } from './components/ToastProvider';
 import { useEndpoints } from './hooks/useEndpoints';
 import { TraceViewer } from './components/TraceViewer';
 import { CostView } from './components/CostView';
@@ -232,7 +233,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <ErrorBoundary>
-        <AppInner />
+        <ToastProvider>
+          <AppInner />
+        </ToastProvider>
       </ErrorBoundary>
     </ThemeProvider>
   );

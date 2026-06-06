@@ -716,6 +716,77 @@ def get_session_traces(session_id: str) -> list[str]:
 # We reuse the error column for notes since it's free-text and already indexed.
 # For proper annotations, a future migration could add an annotations table.
 
+def compare_traces(trace_a: str, trace_b: str) -> dict | None:
+    """Compare two traces span-by-span, matching on (name, kind) pairs.
+    Returns matched pairs with diffs + unpaired spans."""
+    trace1 = get_trace(trace_a)
+    trace2 = get_trace(trace_b)
+    
+    if "error" in trace1 or "error" in trace2:
+        return None
+    
+    spans_a = trace1["spans"]
+    spans_b = trace2["spans"]
+    
+    # Build lookup by (name, kind) for each trace
+    def build_lookup(spans):
+        lookup: dict = {}
+        for s in spans:
+            key = (s["name"], s["kind"])
+            if key not in lookup:
+                lookup[key] = []
+            lookup[key].append(s)
+        return lookup
+    
+    lookup_a = build_lookup(spans_a)
+    lookup_b = build_lookup(spans_b)
+    
+    all_keys = set(lookup_a.keys()) | set(lookup_b.keys())
+    
+    comparisons: list = []
+    only_a: list = []
+    only_b: list = []
+    
+    for key in sorted(all_keys):
+        a_list = lookup_a.get(key, [])
+        b_list = lookup_b.get(key, [])
+        
+        # Pair spans by position
+        max_len = max(len(a_list), len(b_list))
+        for i in range(max_len):
+            sa = a_list[i] if i < len(a_list) else None
+            sb = b_list[i] if i < len(b_list) else None
+            
+            if sa and sb:
+                dur_diff = round(sb.get("duration_ms", 0) - sa.get("duration_ms", 0), 1)
+                # Token diff for LLM spans
+                tokens_a = 0
+                tokens_b = 0
+                if sa.get("kind") == "llm_call":
+                    tokens_a = (sa.get("metadata", {}).get("input_tokens", 0) or 0) + (sa.get("metadata", {}).get("output_tokens", 0) or 0)
+                    tokens_b = (sb.get("metadata", {}).get("input_tokens", 0) or 0) + (sb.get("metadata", {}).get("output_tokens", 0) or 0)
+                status_changed = sa.get("status") != sb.get("status")
+                
+                comparisons.append({
+                    "name": key[0],
+                    "kind": key[1],
+                    "a": {"id": sa["id"], "duration_ms": sa.get("duration_ms", 0), "tokens": tokens_a, "status": sa.get("status", "")},
+                    "b": {"id": sb["id"], "duration_ms": sb.get("duration_ms", 0), "tokens": tokens_b, "status": sb.get("status", "")},
+                    "diff": {"duration_ms": dur_diff, "tokens": tokens_b - tokens_a, "status_changed": status_changed},
+                })
+            elif sa:
+                only_a.append({"name": key[0], "kind": key[1], "id": sa["id"], "duration_ms": sa.get("duration_ms", 0), "status": sa.get("status", "")})
+            elif sb:
+                only_b.append({"name": key[0], "kind": key[1], "id": sb["id"], "duration_ms": sb.get("duration_ms", 0), "status": sb.get("status", "")})
+    
+    return {
+        "trace_a": {"trace_id": trace_a, "span_count": len(spans_a), "total_duration_ms": sum(s.get("duration_ms", 0) for s in spans_a)},
+        "trace_b": {"trace_id": trace_b, "span_count": len(spans_b), "total_duration_ms": sum(s.get("duration_ms", 0) for s in spans_b)},
+        "comparisons": comparisons,
+        "only_a": only_a,
+        "only_b": only_b,
+    }
+
 # ── StorageBackend adapter ────────────────────
 
 class SQLiteBackend:

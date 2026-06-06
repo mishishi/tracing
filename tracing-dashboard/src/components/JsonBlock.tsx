@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Copy, CheckCircle2, Search } from 'lucide-react';
+import { useToast } from './ToastProvider';
+import { ChevronDown, ChevronUp, Copy, Search } from 'lucide-react';
 
 interface JsonBlockProps {
   label: string;
@@ -11,15 +12,14 @@ interface JsonBlockProps {
 
 export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = false, searchable = false }: JsonBlockProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [copied, setCopied] = useState(false);
   const [search, setSearch] = useState('');
+  const { success } = useToast();
 
   const copy = useCallback(() => {
     navigator.clipboard.writeText(content).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [content]);
+      success('已复制到剪贴板', 2000);
+    }).catch(() => {});
+  }, [content, success]);
 
   const displayContent = search
     ? content.split('\n').filter((l) => l.toLowerCase().includes(search.toLowerCase())).join('\n')
@@ -49,7 +49,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
             className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
             aria-label="复制"
           >
-            {copied ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+            <Copy className="w-3 h-3" />
           </button>
           {needsExpand && (
             <button

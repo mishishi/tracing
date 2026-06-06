@@ -76,6 +76,16 @@ t("GET /search?q=gpt", lambda: len(client.get("/search?q=gpt").json()["results"]
 t("GET /search?q=timeout", lambda: len(client.get("/search?q=timeout").json()["results"]) == 1)
 t("GET /search empty", lambda: len(client.get("/search?q=nonexist").json()["results"]) == 0)
 
+# ── 3b. Compare ──
+print("\n[3b] Compare")
+compare_r = client.get("/traces/compare?trace_a=tr1&trace_b=tr2")
+t("GET /traces/compare tr1 vs tr2", lambda: compare_r.status_code == 200)
+compare_data = compare_r.json()
+t("Compare has comparisons", lambda: isinstance(compare_data.get("comparisons"), list))
+t("Compare has trace_a info", lambda: compare_data["trace_a"]["trace_id"] == "tr1")
+t("Compare has trace_b info", lambda: compare_data["trace_b"]["trace_id"] == "tr2")
+t("Compare 404 nonexistent", lambda: client.get("/traces/compare?trace_a=nonexist&trace_b=tr2").status_code == 404)
+
 # ── 4. Analytics ──
 print("\n[4] Analytics")
 costs = client.get("/costs").json()

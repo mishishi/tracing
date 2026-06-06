@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query, Body
 from fastapi.responses import JSONResponse
 from ..store import (
     list_traces, get_trace, get_project_list, search_spans,
-    update_span, get_sessions, get_session_traces,
+    update_span, get_sessions, get_session_traces, compare_traces,
 )
 from fastapi.responses import JSONResponse
 from ..store import get_stats as _get_stats
@@ -20,6 +20,19 @@ async def trace_list(
     offset: int = Query(default=0, ge=0),
 ):
     return list_traces(project=project, limit=limit, offset=offset)
+
+
+
+@router.get("/traces/compare")
+async def trace_compare(
+    trace_a: str = Query(...),
+    trace_b: str = Query(...),
+):
+    """Compare two traces span-by-span."""
+    result = compare_traces(trace_a, trace_b)
+    if result is None:
+        return JSONResponse(status_code=404, content={"error": "one or both traces not found"})
+    return result
 
 
 @router.get("/traces/{trace_id}")

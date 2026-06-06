@@ -1,7 +1,8 @@
-import { X, Copy, CheckCircle2, Zap, Wrench, Cpu, Clock, Layers, Tag, MessageSquare, Star, Edit3, Save } from 'lucide-react';
+import { X, Copy, Zap, Wrench, Cpu, Clock, Layers, Tag, MessageSquare, Star, Edit3, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Span } from '../utils/trace-utils';
 import { JsonBlock } from './JsonBlock';
+import { useToast } from './ToastProvider';
 
 /* ================================================
    Helpers
@@ -37,8 +38,7 @@ interface SpanDetailPanelProps {
 }
 
 export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
-  const [copied, setCopied] = useState(false);
-
+  const { success: toastSuccess, error: toastError } = useToast();
   const [editing, setEditing] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -55,8 +55,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
 
   const copyJson = () => {
     navigator.clipboard.writeText(JSON.stringify(span, null, 2)).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toastSuccess('已复制 Span JSON', 2000);
     }).catch(() => {});
   };
 
@@ -69,7 +68,10 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tags: { ...localTags, rating: String(rating) }, notes: notesInput || undefined }),
-    }).finally(() => setSaving(false));
+    })
+      .then((r) => { if (r.ok) toastSuccess('标注已保存', 2000); else toastError('保存失败'); })
+      .catch(() => toastError('保存失败'))
+      .finally(() => setSaving(false));
     setEditing(false);
   };
 
@@ -93,7 +95,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
           <button onClick={copyJson}
             className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
             title="复制 JSON">
-            {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+            <Copy className="w-4 h-4" />
           </button>
           <button onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"

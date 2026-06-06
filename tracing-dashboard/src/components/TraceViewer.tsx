@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Layers, Zap, Code2, Wrench, Activity,
-  CheckCircle2, AlertCircle, Clock,
+  AlertCircle, Clock,
   BarChart3, Search, Server, Filter, X, Inbox,
   Minimize2, Maximize2, RefreshCw, Copy, Download, Share2,
-  List, GanttChartSquare, Bell, FileDown,
+  List, GanttChartSquare, Bell, FileDown, GitCompare,
 } from 'lucide-react';
 import { Dropdown } from './Dropdown';
 import { WaterfallView } from './WaterfallView';
 import { SpanDetailPanel } from './SpanDetailPanel';
 import { TimelineView } from './TimelineView';
+import { TraceCompareView } from './TraceCompareView';
 import { SkeletonTraceList } from './Skeleton';
+import { useToast } from './ToastProvider';
 import { useTraces } from '../hooks/useTraces';
 import { useKeyboardNav } from '../hooks/useKeyboardNav';
 import { exportToCSV } from '../utils/exportCsv';
@@ -23,6 +25,7 @@ import {
 interface TraceViewerProps { endpoint: string; initialTraceId?: string; }
 
 export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
+  const { success: toastSuccess, info: toastInfo } = useToast();
   const {
     traces, filteredTraces, stats, projects, loadingList,
     newTraceCount, sseConnected,
@@ -40,12 +43,14 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
   const [viewMode, setViewMode] = useState<'list' | 'waterfall' | 'timeline'>('waterfall');
   const [timeRange, setTimeRange] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [copied, setCopied] = useState(false);
   const [showList, setShowList] = useState(true);
-  const [shareUrl, setShareUrl] = useState('');
   const [viewGroupBy, setViewGroupBy] = useState<'trace' | 'session'>('trace');
   const [sessions, setSessions] = useState<any[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareTraceA, setCompareTraceA] = useState<string | null>(null);
+  const [compareData, setCompareData] = useState<any>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
 
   const toggle = (id: string) => setExpanded((p) => {
     const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n;
@@ -73,11 +78,37 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
       .finally(() => setLoading(false));
   };
 
-  const closeDetail = () => { setSelected(null); setSelectedSpanId(null); };
+  const closeDetail = () => { setSelected(null); setSelectedSpanId(null); setCompareMode(false); };
+
+  const startCompare = () => {
+    if (!selected) return;
+    setCompareMode(true);
+    setCompareTraceA(selected.trace_id);
+    setCompareData(null);
+  };
+
+  const cancelCompare = () => {
+    setCompareMode(false);
+    setCompareTraceA(null);
+    setCompareData(null);
+  };
+
+  const selectCompareB = (id: string) => {
+    if (!compareTraceA || id === compareTraceA) return;
+    setCompareLoading(true);
+    fetch(endpoint + '/traces/compare?trace_a=' + compareTraceA + '&trace_b=' + id)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) { console.warn('Compare failed:', d.error); cancelCompare(); }
+        else setCompareData(d);
+      })
+      .catch((err) => { console.warn('Compare failed:', err); cancelCompare(); })
+      .finally(() => setCompareLoading(false));
+  };
   const copyTraceId = (id: string) => {
-    navigator.clipboard.writeText(id).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard.writeText(id).then(() => {
+      toastSuccess('已复制 Trace ID', 2000);
+    }).catch(() => {});
   };
 
   const shareTrace = async () => {
@@ -91,10 +122,11 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
       const data = await res.json();
       if (data.share_id) {
         const url = window.location.origin + '/s/' + data.share_id;
-        setShareUrl(url);
-        navigator.clipboard.writeText(url).catch(() => {});
+        navigator.clipboard.writeText(url).then(() => {
+          toastSuccess('分享链接已复制到剪贴板', 3000);
+        }).catch(() => {});
       }
-    } catch (err) { console.warn('Share failed:', err); }
+    } catch (err) { console.warn('Share failed:', err); toastInfo('分享失败，请重试'); }
   };
 
   const exportTrace = () => {
@@ -219,6 +251,16 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
           </div>
         </div>
 
+        
+            {compareMode && compareTraceA && (
+              <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+                <div className="flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400">
+                  <GitCompare className="w-3.5 h-3.5" />
+                  <span>选择第二个 Trace 进行对比 · A: <code className="font-mono bg-indigo-100 dark:bg-indigo-800 px-1 rounded text-[11px]">{compareTraceA.slice(0, 12)}...</code></span>
+                </div>
+                <button onClick={cancelCompare} className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-400 font-medium">取消</button>
+              </div>
+            )}
         {/* Search + Filter */}
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -263,7 +305,7 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
             paginatedTraces.map((t) => (
               <button
                 key={t.trace_id}
-                onClick={() => loadTrace(t.trace_id)}
+                onClick={() => { if (compareMode && compareTraceA) { selectCompareB(t.trace_id); } else { loadTrace(t.trace_id); } }}
                 className={
                   'w-full text-left px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ' +
                   (selected?.trace_id === t.trace_id ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-2 border-l-indigo-500' : '')
@@ -391,6 +433,12 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
                 <button onClick={toggleAll} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label={allExpanded ? '折叠全部' : '展开全部'}>
                   {allExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
+                {!compareMode && selected && (
+                  <button onClick={startCompare} className="p-1.5 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="对比">
+                    <GitCompare className="w-4 h-4" />
+                  </button>
+                )}
+
                 <button onClick={shareTrace} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="分享">
                   <Share2 className="w-4 h-4" />
                 </button>
@@ -401,7 +449,7 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
                   <FileDown className="w-4 h-4" />
                 </button>
                 <button onClick={() => copyTraceId(selected.trace_id)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="复制 Trace ID">
-                  {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  <Copy className="w-4 h-4" />
                 </button>
                 <button onClick={closeDetail} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="关闭">
                   <X className="w-4 h-4" />
@@ -456,6 +504,19 @@ export function TraceViewer({ endpoint, initialTraceId }: TraceViewerProps) {
             )}
           </>
         )}
+
+            {compareData && (
+              <div className="mt-4">
+                <TraceCompareView data={compareData} onClose={() => setCompareData(null)} />
+              </div>
+            )}
+
+            {compareLoading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <span className="ml-2 text-xs text-gray-400">正在对比...</span>
+              </div>
+            )}
         {loading && (
           <div className="flex items-center justify-center py-16">
             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
