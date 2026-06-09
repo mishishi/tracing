@@ -100,24 +100,38 @@ def get_trace(trace_id: str) -> dict:
         }
 
 
-def list_traces(project: str = "", limit: int = 50, offset: int = 0) -> dict:
+def list_traces(project: str = "", limit: int = 50, offset: int = 0,
+               status: str = "", kind: str = "", since: str = "") -> dict:
     with _conn() as db:
         db.row_factory = sqlite3.Row
-        where = "WHERE trace_id != ''"
-        params = []
-        if project:
-            where += " AND project = ?"
-            params.append(project)
-        params.extend([limit, offset])
-        rows = db.execute(
-            f"SELECT trace_id, session_id, project, MIN(start_time) as start_time, "
-            f"MAX(end_time) as end_time, COUNT(*) as span_count, "
-            f"SUM(duration_ms) as total_duration_ms "
-            f"FROM spans {where} "
-            f"GROUP BY trace_id ORDER BY start_time DESC LIMIT ? OFFSET ?",
-            params
-        ).fetchall()
+        inner_sql = "SELECT trace_id, session_id, project, MIN(start_time) as start_time, MAX(end_time) as end_time, COUNT(*) as span_count, SUM(duration_ms) as total_duration_ms FROM spans WHERE trace_id != ''"
+        inner_params: list = []
 
+        if project:
+            inner_sql += " AND project = ?"
+            inner_params.append(project)
+
+        inner_sql += " GROUP BY trace_id"
+
+        outer_sql = f"SELECT * FROM ({inner_sql}) WHERE 1=1"
+        outer_params = list(inner_params)
+
+        if since:
+            outer_sql += " AND start_time >= ?"
+            outer_params.append(since)
+
+        if status:
+            outer_sql += " AND trace_id IN (SELECT DISTINCT trace_id FROM spans WHERE status = ?)"
+            outer_params.append(status)
+
+        if kind:
+            outer_sql += " AND trace_id IN (SELECT DISTINCT trace_id FROM spans WHERE kind = ?)"
+            outer_params.append(kind)
+
+        outer_sql += " ORDER BY start_time DESC LIMIT ? OFFSET ?"
+        outer_params.extend([limit, offset])
+
+        rows = db.execute(outer_sql, outer_params).fetchall()
         return {"traces": [dict(r) for r in rows]}
 
 

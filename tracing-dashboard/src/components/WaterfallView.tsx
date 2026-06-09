@@ -49,6 +49,7 @@ function WaterfallRow({
   maxDepth,
   selectedId,
   onSelect,
+  isMatch = false,
 }: {
   node: TreeNode;
   traceStart: number;
@@ -56,6 +57,7 @@ function WaterfallRow({
   maxDepth: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  isMatch?: boolean;
 }) {
   const { span, depth } = node;
   const offset = timeOffset(span, traceStart);
@@ -68,7 +70,7 @@ function WaterfallRow({
       onClick={() => onSelect(span.id)}
       className={
         'w-full text-left flex items-center gap-0 transition-colors group ' +
-        (selectedId === span.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50')
+        (selectedId === span.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : isMatch ? 'bg-amber-50/80 dark:bg-amber-900/30 ring-1 ring-amber-300/50 dark:ring-amber-500/30' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50')
       }
       style={{ minHeight: '28px' }}
     >
@@ -147,6 +149,7 @@ interface WaterfallViewProps {
   trace: TraceData;
   selectedSpanId: string | null;
   onSelectSpan: (id: string) => void;
+  highlightQuery?: string;
 }
 
 export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedSpanId, onSelectSpan }: WaterfallViewProps) {

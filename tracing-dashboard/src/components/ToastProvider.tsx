@@ -123,14 +123,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
    Hook
    ================================================ */
 
-function noopToast(_message: string, _type?: ToastType, _duration?: number) {}
+const noopToastBase = (_message: string, _type?: ToastType, _duration?: number) => {};
+const noopToastShort = (message: string, duration?: number) => {};
 
 const noopContext: ToastContextValue = {
-  toast: noopToast,
-  success: noopToast,
-  error: noopToast,
-  info: noopToast,
-  warning: noopToast,
+  toast: noopToastBase,
+  success: noopToastShort,
+  error: noopToastShort,
+  info: noopToastShort,
+  warning: noopToastShort,
 };
 
 export function useToast(): ToastContextValue {

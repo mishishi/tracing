@@ -19,7 +19,7 @@ const kindLabel: Record<string, string> = {
 
 interface SearchBarProps {
   endpoint: string;
-  onSelectTrace: (traceId: string) => void;
+  onSelectTrace: (traceId: string, query: string) => void;
 }
 
 export function SearchBar({ endpoint, onSelectTrace }: SearchBarProps) {
@@ -68,9 +68,10 @@ export function SearchBar({ endpoint, onSelectTrace }: SearchBarProps) {
   };
 
   const handleSelect = (traceId: string) => {
+    const q = query;
     setOpen(false);
     setQuery('');
-    onSelectTrace(traceId);
+    onSelectTrace(traceId, q);
   };
 
   return (

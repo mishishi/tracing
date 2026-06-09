@@ -39,6 +39,7 @@ function AppInner() {
   const [globalProject, setGlobalProject] = useState('');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sharedTraceId, setSharedTraceId] = useState('');
+  const [highlightQuery, setHighlightQuery] = useState('');
   const [density, setDensity] = useState<'comfortable' | 'compact'>(() => {
     return localStorage.getItem('tracing-dashboard-density') === 'compact' ? 'compact' : 'comfortable';
   });
@@ -163,6 +164,15 @@ function AppInner() {
               )}
             </div>
 
+            <SearchBar
+              endpoint={endpoint}
+              onSelectTrace={(traceId: string, query: string) => {
+                setHighlightQuery(query);
+                setSharedTraceId(traceId);
+                setActiveTab('traces');
+              }}
+            />
+
             {/* Density toggle */}
             <button onClick={() => setDensity(d => d === 'compact' ? 'comfortable' : 'compact')}
               className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
@@ -208,7 +218,7 @@ function AppInner() {
           <div className="space-y-6">
             <LatencyHeatmap endpoint={endpoint} project={globalProject} />
             <PercentileTrend endpoint={endpoint} project={globalProject} />
-            <TraceViewer endpoint={endpoint} initialTraceId={sharedTraceId} />
+            <TraceViewer endpoint={endpoint} initialTraceId={sharedTraceId} highlightQuery={highlightQuery} />
           </div>
         )}
         {activeTab === 'costs' && <CostView endpoint={endpoint} />}

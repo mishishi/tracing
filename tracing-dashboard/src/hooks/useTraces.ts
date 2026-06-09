@@ -18,6 +18,12 @@ interface UseTracesReturn {
   setSearchQuery: (q: string) => void;
   projectFilter: string;
   setProjectFilter: (p: string) => void;
+  statusFilter: string;
+  setStatusFilter: (p: string) => void;
+  kindFilter: string;
+  setKindFilter: (p: string) => void;
+  timeRange: string;
+  setTimeRange: (p: string) => void;
   page: number;
   setPage: (p: number) => void;
   totalPages: number;
@@ -34,6 +40,9 @@ export function useTraces({ endpoint, pollInterval = 5000 }: UseTracesOptions): 
   const [sseConnected, setSseConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [kindFilter, setKindFilter] = useState('');
+  const [timeRange, setTimeRange] = useState('');
   const [page, setPage] = useState(0);
 
   const prevTraceRef = useRef(0);
@@ -46,7 +55,17 @@ export function useTraces({ endpoint, pollInterval = 5000 }: UseTracesOptions): 
     const ac = new AbortController();
     abortRef.current = ac;
 
-    fetch(endpoint + '/traces?limit=200', { signal: ac.signal })
+    const params = new URLSearchParams();
+    params.set('limit', '200');
+    if (projectFilter) params.set('project', projectFilter);
+    if (statusFilter) params.set('status', statusFilter);
+    if (kindFilter) params.set('kind', kindFilter);
+    if (timeRange) {
+      const ms: Record<string, number> = { '1h': 3600000, '6h': 21600000, '24h': 86400000, '7d': 604800000 };
+      const since = new Date(Date.now() - (ms[timeRange] || 0)).toISOString();
+      params.set('since', since);
+    }
+    fetch(endpoint + '/traces?' + params.toString(), { signal: ac.signal })
       .then((r) => r.json())
       .then((d) => {
         if (ac.signal.aborted) return;
@@ -82,11 +101,11 @@ export function useTraces({ endpoint, pollInterval = 5000 }: UseTracesOptions): 
       });
   }, [endpoint]);
 
-  // Defer first fetch
+  // Refetch when filters change
   useEffect(() => {
-    const timer = setTimeout(fetchData, 0);
+    const timer = setTimeout(fetchData, 100);
     return () => clearTimeout(timer);
-  }, [endpoint]);
+  }, [endpoint, projectFilter, statusFilter, kindFilter, timeRange]);
 
   // Polling
   useEffect(() => {
@@ -163,6 +182,12 @@ export function useTraces({ endpoint, pollInterval = 5000 }: UseTracesOptions): 
     setSearchQuery,
     projectFilter,
     setProjectFilter,
+    statusFilter,
+    setStatusFilter,
+    kindFilter,
+    setKindFilter,
+    timeRange,
+    setTimeRange,
     page,
     setPage,
     totalPages,

@@ -18,8 +18,12 @@ async def trace_list(
     project: str = Query(default=""),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    status: str = Query(default=""),
+    kind: str = Query(default=""),
+    since: str = Query(default=""),
 ):
-    return list_traces(project=project, limit=limit, offset=offset)
+    return list_traces(project=project, limit=limit, offset=offset,
+                       status=status, kind=kind, since=since)
 
 
 

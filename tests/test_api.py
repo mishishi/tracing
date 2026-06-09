@@ -64,6 +64,12 @@ t("GET /traces?project=test-api", lambda: len(client.get("/traces?project=test-a
 t("GET /traces?limit=1", lambda: len(client.get("/traces?limit=1").json()["traces"]) == 1)
 t("GET /traces/tr1 span_count=2", lambda: client.get("/traces/tr1").json()["span_count"] == 2)
 t("GET /traces/nonexistent=404", lambda: client.get("/traces/nonexistent").status_code == 404)
+t("GET /traces?status=ok", lambda: len(client.get("/traces?status=ok").json()["traces"]) >= 1)
+t("GET /traces?status=error", lambda: len(client.get("/traces?status=error").json()["traces"]) >= 1)
+t("GET /traces?kind=llm_call", lambda: len(client.get("/traces?kind=llm_call").json()["traces"]) >= 1)
+t("GET /traces?kind=tool_call", lambda: len(client.get("/traces?kind=tool_call").json()["traces"]) >= 1)
+t("GET /traces?since=2024-01-02", lambda: len(client.get("/traces?since=2024-01-02T00:00:00Z").json()["traces"]) == 1)
+t("GET /traces?status=ok&kind=agent", lambda: len(client.get("/traces?status=ok&kind=agent").json()["traces"]) >= 1)
 
 stats = client.get("/stats").json()
 t("GET /stats total=3", lambda: stats["total_spans"] == 3 and stats["total_tokens"] == 150)
