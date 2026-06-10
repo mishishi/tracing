@@ -1,4 +1,4 @@
-import { useMemo, memo, useState, useCallback } from 'react';
+import { useMemo, memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { Dropdown } from './Dropdown';
 import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
@@ -203,9 +203,17 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
     return r;
   }, [flat, spanSearch, spanKindFilter, spanStatusFilter, spanTagFilter]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoom((z) => Math.max(1, Math.min(20, z - e.deltaY * 0.005)));
+  const waterfallRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = waterfallRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setZoom((z) => Math.max(1, Math.min(20, z - e.deltaY * 0.005)));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
   const visibleStart = traceDuration * (pan / 100);
@@ -301,7 +309,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
       </div>
 
       {/* Span rows */}
-      <div className="max-h-[500px] overflow-y-auto" onWheel={handleWheel}>
+      <div ref={waterfallRef} className="max-h-[500px] overflow-y-auto">
         {filteredFlat.map((node) => (
           <WaterfallRow
             key={node.span.id}
