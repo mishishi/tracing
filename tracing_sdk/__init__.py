@@ -84,8 +84,10 @@ def get_stats() -> dict:
 # Context manager for manual instrumentation
 from .tracer import trace
 
+
+
+
 # Auto-init on import if endpoint configured
 import os
 if os.environ.get("TRACING_ENDPOINT"):
     _try_enable()
-

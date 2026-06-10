@@ -21,7 +21,8 @@ def _log(msg: str, *args, level: str = "debug"):
 
 # ── Span tracking (thread-local for async safety) ──
 _flow_span: "Span | None" = None  # shared: one per crew execution
-_local = threading.local()
+# _local is a plain object so all event handler threads share state
+_local = type('_State', (), {})()
 
 def _get_local():
     if not hasattr(_local, "initialized"):
@@ -77,6 +78,7 @@ def _resolve_crewai_events():
     return {}
 
 def _patch_crewai():
+    global _patched
     if _patched:
         return
     _patched = True
