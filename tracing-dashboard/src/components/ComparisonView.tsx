@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, AlertTriangle, DollarSign, Cpu, Layers, Loader2 } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, DollarSign, Cpu, Zap, Layers, Loader2 } from 'lucide-react';
 import { MultiSelect } from './MultiSelect';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { SkeletonStats, SkeletonBlock } from './Skeleton';
@@ -15,10 +15,11 @@ interface ProjectOption {
 interface ProjectStats {
   total_cost: number;
   total_calls: number;
+  total_tokens: number;
   error_rate: number;
   error_count: number;
   total_spans: number;
-  by_day: Array<{ date: string; cost: number; input_tokens: number; output_tokens: number; calls: number }>;
+  by_day: Array<{ date: string; cost: number; input_tokens: number; output_tokens: number; calls: number; tokens: number }>;
 }
 
 interface ComparisonViewProps {
@@ -42,7 +43,8 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
   const [selected, setSelected] = useState<string[]>([]);
   const [data, setData] = useState<Record<string, ProjectStats>>({});
   const [loading, setLoading] = useState(false);
-  const [metric, setMetric] = useState<'cost' | 'calls' | 'errors'>('cost');
+  const [metric, setMetric] = useState<'cost' | 'calls' | 'errors' | 'tokens'>('cost');
+  const [period, setPeriod] = useState(30);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; values: Array<{ project: string; value: string; color: string }> } | null>(null);
 
   // Fetch project list
@@ -67,15 +69,17 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
     Promise.all(
       selected.map((project) =>
         Promise.all([
-          fetch(endpoint + '/costs?project=' + project + '&days=30').then((r) => r.json()),
-          fetch(endpoint + '/errors?project=' + project + '&days=30').then((r) => r.json()),
-        ]).then(([costs, errors]) => {
+          fetch(endpoint + '/costs?project=' + encodeURIComponent(project) + '&days=' + period).then((r) => r.json()),
+          fetch(endpoint + '/errors?project=' + encodeURIComponent(project) + '&days=' + period).then((r) => r.json()),
+          fetch(endpoint + '/stats?project=' + encodeURIComponent(project)).then((r) => r.json()),
+        ]).then(([costs, errors, statsData]) => {
           const stats: ProjectStats = {
             total_cost: costs.total_cost || 0,
             total_calls: costs.total_calls || 0,
             error_rate: errors.error_rate || 0,
             error_count: errors.total_errors || 0,
             total_spans: errors.total_spans || 0,
+            total_tokens: (statsData.total_tokens || 0),
             by_day: costs.by_day || [],
           };
           return { project, stats };
@@ -87,7 +91,7 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
       setData(map);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [selected, endpoint]);
+  }, [selected, endpoint, period]);
 
   const projectOptions = projects.filter((p) => p.value);
 
@@ -109,6 +113,21 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
           placeholder="点击选择要对比的项目..."
           className="max-w-md"
         />
+        <div className="flex items-center gap-2 mt-3">
+          <span className="text-[10px] text-gray-400">时间范围:</span>
+          <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            {[7, 30, 90].map((d) => (
+              <button
+                key={d}
+                onClick={() => setPeriod(d)}
+                className={'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' +
+                  (period === d ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+              >
+                {d === 7 ? '7天' : d === 30 ? '30天' : '90天'}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {loading && (
@@ -141,6 +160,10 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
                         <span className="font-mono text-gray-700 dark:text-gray-300">{fmtNum(stats.total_calls)}</span>
                       </div>
                       <div className="flex justify-between text-xs">
+                        <span className="text-gray-400 flex items-center gap-1"><Zap className="w-3 h-3" />Token</span>
+                        <span className="font-mono text-gray-700 dark:text-gray-300">{fmtNum(stats.total_tokens)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
                         <span className="text-gray-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />错误率</span>
                         <span className={'font-mono font-medium ' + (stats.error_rate >= 5 ? 'text-red-500' : stats.error_rate > 0 ? 'text-amber-500' : 'text-green-500')}>
                           {stats.error_rate}%
@@ -151,6 +174,50 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
                 </div>
               );
             })}
+          </div>
+
+          {/* Side-by-side Comparison Table */}
+          <div className="bento mt-6">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">指标一览</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 px-3 text-gray-400 font-medium">指标</th>
+                    {selected.map((p) => {
+                      const color = projects.find((pr) => pr.value === p)?.color || '#888';
+                      return (
+                        <th key={p} className="text-right py-2 px-3 font-medium truncate max-w-[120px]" style={{ color }}>
+                          {p}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {[
+                    { label: '成本', key: 'total_cost', fmt: (v: number) => fmtCost(v) },
+                    { label: 'LLM 调用', key: 'total_calls', fmt: (v: number) => fmtNum(v) },
+                    { label: 'Token 用量', key: 'total_tokens', fmt: (v: number) => fmtNum(v) },
+                    { label: 'Span 总数', key: 'total_spans', fmt: (v: number) => fmtNum(v) },
+                    { label: '错误率', key: 'error_rate', fmt: (v: number) => v + '%' },
+                  ].map((row) => (
+                    <tr key={row.key} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="py-2 px-3 text-gray-500">{row.label}</td>
+                      {selected.map((p) => {
+                        const stats = data[p];
+                        const val = stats ? (stats as any)[row.key] : 0;
+                        return (
+                          <td key={p} className="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300">
+                            {row.fmt(val)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Trend Chart */}
@@ -186,8 +253,8 @@ function TrendChart({
   data: Record<string, ProjectStats>;
   selected: string[];
   projects: ProjectOption[];
-  metric: 'cost' | 'calls' | 'errors';
-  onMetricChange: (m: 'cost' | 'calls' | 'errors') => void;
+  metric: 'cost' | 'calls' | 'tokens' | 'errors';
+  onMetricChange: (m: 'cost' | 'calls' | 'tokens' | 'errors') => void;
   tooltip: { x: number; y: number; values: Array<{ project: string; value: string; color: string }> } | null;
   onTooltip: (t: typeof tooltip) => void;
 }) {
@@ -206,6 +273,7 @@ function TrendChart({
     if (!day) return 0;
     if (metric === 'cost') return day.cost;
     if (metric === 'calls') return day.calls;
+    if (metric === 'tokens') return (day.input_tokens || 0) + (day.output_tokens || 0);
     return data[project]?.error_rate || 0;
   };
 
@@ -247,7 +315,7 @@ function TrendChart({
     );
   };
 
-  const metricLabel = { cost: '成本', calls: '调用量', errors: '错误率' };
+  const metricLabel = { cost: '成本', calls: '调用量', tokens: 'Token', errors: '错误率' };
 
   return (
     <div className="bento">
@@ -257,7 +325,7 @@ function TrendChart({
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">趋势对比</h4>
         </div>
         <div className="flex items-center gap-1 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
-          {(['cost', 'calls', 'errors'] as const).map((m) => (
+          {(['cost', 'calls', 'tokens', 'errors'] as const).map((m) => (
             <button
               key={m}
               onClick={() => onMetricChange(m)}

@@ -52,7 +52,7 @@ export function TraceCompareView({ data, onClose }: TraceCompareViewProps) {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
         <div className="text-center">
           <p className="text-[10px] text-gray-400 uppercase mb-1">Trace A</p>
           <p className="text-xs font-mono text-gray-600 dark:text-gray-300">{trace_a.trace_id.slice(0, 12)}</p>

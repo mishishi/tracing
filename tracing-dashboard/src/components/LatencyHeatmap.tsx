@@ -158,7 +158,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: kindColor[kind] || '#888' }}
                 />
-                <span className="text-[10px] text-gray-500 truncate">
+                <span className="text-[9px] sm:text-[10px] text-gray-500 truncate w-8 sm:w-auto">
                   {kindLabel[kind] || kind}
                 </span>
               </div>
@@ -172,7 +172,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
                 return (
                   <div
                     key={h}
-                    className="flex-1 h-7 rounded-sm cursor-default transition-opacity hover:opacity-80 relative"
+                    className="flex-1 h-5 sm:h-7 rounded-sm cursor-default transition-opacity hover:opacity-80 relative"
                     style={{
                       backgroundColor: hasData ? getHeatColor(avgMs) : 'var(--surface)',
                       border: hasData ? 'none' : '1px solid var(--border)',
@@ -189,7 +189,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
           ))}
 
           {/* Legend */}
-          <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
             <span className="text-[9px] text-gray-400">快</span>
             <div className="flex h-3 rounded-full overflow-hidden" style={{ width: 120 }}>
               <div className="flex-1" style={{ backgroundColor: isDark ? 'rgb(100, 170, 30)' : 'rgb(180, 220, 70)' }} />

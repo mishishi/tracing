@@ -106,14 +106,14 @@ function AppInner() {
             <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center">
               <BarChart3 className="w-5 h-5 text-white" />
             </div>
-            <div className="hidden sm:block">
+            <div className="hidden xs:block">
               <h1 className="text-sm font-bold text-gray-900 dark:text-gray-100">Tracing Dashboard</h1>
               <p className="text-[11px] text-gray-400">Agent Observability</p>
             </div>
           </div>
 
           {/* Right controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Health + Endpoint selector */}
             <div className="relative">
               <button
@@ -128,7 +128,7 @@ function AppInner() {
               </button>
 
               {settingsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-4 z-50">
+                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-4 z-50">
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">服务器配置</h3>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {endpoints.map((ep) => (
@@ -193,7 +193,7 @@ function AppInner() {
       {/* ===== Main ===== */}
       <main id="dashboard-main" className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
+        <div className="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit max-w-full overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.key}
