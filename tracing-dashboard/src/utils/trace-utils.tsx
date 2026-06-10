@@ -55,17 +55,60 @@ export const kindColor: Record<string, string> = {
 };
 
 export const MODEL_PRICES: Record<string, { input: number; output: number }> = {
-  'gpt-4': { input: 0.03, output: 0.06 },
-  'gpt-4o': { input: 0.0025, output: 0.01 },
-  'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
-  'gpt-4.1': { input: 0.002, output: 0.008 },
-  'gpt-5': { input: 0.00125, output: 0.01 },
-  'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
-  'claude-3-opus': { input: 0.015, output: 0.075 },
-  'claude-3-sonnet': { input: 0.003, output: 0.015 },
-  'claude-3-haiku': { input: 0.00025, output: 0.00125 },
-  'claude-4': { input: 0.003, output: 0.015 },
-  'claude-4-sonnet': { input: 0.003, output: 0.015 },
+  // RMB per 1M tokens. Source: official API docs as of 2025-Q3.
+  // Models with (*) are estimates — verify against current pricing pages.
+  // ── OpenAI ──
+  "gpt-4o": { input: 18.00, output: 72.00 },
+  "gpt-4o-mini": { input: 1.08, output: 4.32 },
+  "gpt-4.1": { input: 14.40, output: 57.60 },
+  "gpt-4.1-mini": { input: 2.88, output: 11.52 },
+  "gpt-4.1-nano": { input: 0.72, output: 2.88 },
+  "gpt-4": { input: 216.00, output: 432.00 },
+  "gpt-4-turbo": { input: 72.00, output: 216.00 },
+  "gpt-3.5-turbo": { input: 3.60, output: 10.80 },
+  "o3-mini": { input: 7.92, output: 31.68 },
+  "gpt-5.5":      { input: 36.25,  output: 217.50 },
+  "gpt-5.5-mini": { input: 1.02,  output: 2.03 },  // (*) verify
+  // ── Anthropic ──
+  "claude-3-opus": { input: 108.00, output: 540.00 },
+  "claude-3.5-sonnet": { input: 21.60, output: 108.00 },
+  "claude-3.5-haiku": { input: 5.76, output: 28.80 },
+  "claude-4-opus": { input: 108.00, output: 540.00 },
+  "claude-4-sonnet": { input: 21.60, output: 108.00 },
+  "claude-4-haiku": { input: 5.76, output: 28.80 },  // (*)
+  "claude-3-sonnet": { input: 21.60, output: 108.00 },
+  "claude-3-haiku": { input: 5.76, output: 28.80 },
+  "claude-4": { input: 21.60, output: 108.00 },
+  // ── Google ──
+  "gemini-1.5-pro": { input: 9.00, output: 36.00 },
+  "gemini-2.5-pro": { input: 9.00, output: 72.00 },
+  "gemini-2.5-flash": { input: 1.08, output: 4.32 },
+  // ── DeepSeek (native RMB) ──
+  "deepseek-chat":     { input: 1.02, output: 2.03 },
+  "deepseek-reasoner": { input: 3.15, output: 6.31 },
+  "deepseek-v4":       { input: 1.02, output: 2.03 },
+  "deepseek-r1":       { input: 3.15, output: 6.31 },
+  // ── Alibaba Qwen ──
+  "qwen-turbo": { input: 0.30, output: 0.60 },
+  "qwen-plus": { input: 0.80, output: 2.00 },
+  "qwen-max": { input: 4.00, output: 16.00 },
+  "qwen3-235b": { input: 4.00, output: 16.00 },
+  // ── Zhipu GLM ──
+  "glm-4-flash": { input: 1.00, output: 1.00 },
+  "glm-4": { input: 1.00, output: 1.00 },
+  "glm-4-plus": { input: 50.00, output: 50.00 },
+  // ── Moonshot Kimi ──
+  "moonshot-v1-8k": { input: 12.00, output: 12.00 },
+  "moonshot-v1-32k": { input: 24.00, output: 24.00 },
+  "moonshot-v1-128k": { input: 60.00, output: 60.00 },
+  "moonshot-v1": { input: 12.00, output: 12.00 },
+  // ── Baidu Ernie ──
+  "ernie-4.0": { input: 120.00, output: 120.00 },
+  "ernie-4.0-turbo": { input: 20.00, output: 20.00 },
+  "ernie-3.5": { input: 12.00, output: 12.00 },
+  // ── xAI Grok ──
+  "grok-3": { input: 21.60, output: 108.00 },
+  "grok-3-mini": { input: 5.76, output: 28.80 },
 };
 
 // ── Formatters ──

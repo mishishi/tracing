@@ -5,9 +5,9 @@ import { TokenHistogram } from './TokenHistogram';
 import { useCostData, type CostsData, type ModelBreakdown, type ProjectBreakdown } from '../hooks/useCostData';
 
 function fmtCost(n: number): string {
-  if (n >= 1) return '$' + n.toFixed(2);
-  if (n >= 0.01) return '$' + n.toFixed(4);
-  return '$' + n.toFixed(6);
+  if (n >= 1) return '¥' + n.toFixed(2);
+  if (n >= 0.01) return '¥' + n.toFixed(4);
+  return '¥' + n.toFixed(6);
 }
 
 function fmtTokens(n: number): string {
@@ -87,7 +87,7 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">成本阈值设置</h4>
           </div>
           <div className="flex items-center gap-3">
-            <label className="text-xs text-gray-500">超过此金额时提醒（美元）:</label>
+            <label className="text-xs text-gray-500">超过此金额时提醒（人民币）:</label>
             <input type="number" min="0" step="0.1" value={threshold || ''}
               onChange={(e) => setThreshold(Number(e.target.value))} placeholder="例: 10"
               className="w-24 px-3 py-1.5 text-sm rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-gray-400" />

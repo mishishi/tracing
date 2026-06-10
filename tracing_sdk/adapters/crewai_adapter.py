@@ -6,6 +6,7 @@ from ..span import Span, SpanKind, SpanStatus
 from ..collector import send
 import re
 import uuid
+import threading
 
 logger = logging.getLogger("tracing.crewai")
 
@@ -18,15 +19,20 @@ def _log(msg: str, *args, level: str = "debug"):
     else:
         logger.debug(msg, *args)
 
-# ── Span tracking ──
-_llm_stack: list[Span] = []
-_tool_stack: list[Span] = []
-_flow_span: Span | None = None
-_agent_span: Span | None = None
+# ── Span tracking (thread-local for async safety) ──
+_flow_span: "Span | None" = None  # shared: one per crew execution
+_local = threading.local()
 
-# Agent/Task context strings for display
-_current_agent: str = ""
-_current_task: str = ""
+def _get_local():
+    if not hasattr(_local, "initialized"):
+        _local.llm_stack = []
+        _local.tool_stack = []
+        _local.flow_span = None
+        _local.agent_span = None
+        _local.current_agent = ""
+        _local.current_task = ""
+        _local.initialized = True
+    return _local
 
 _patched = False
 
@@ -71,7 +77,6 @@ def _resolve_crewai_events():
     return {}
 
 def _patch_crewai():
-    global _patched
     if _patched:
         return
     _patched = True
@@ -125,15 +130,15 @@ def _patch_crewai():
 
     @crewai_event_bus.on(CrewKickoffCompletedEvent)
     def _on_crew_completed(source, event):
-        global _flow_span, _agent_span
+        global _flow_span
         _log("CREW_COMPLETED")
         try:
             _flush_pending_tools()
             # Finish last agent if still running
-            if _agent_span and _agent_span.status == SpanStatus.RUNNING:
-                _agent_span.finish(SpanStatus.OK)
-                send(_agent_span)
-                _agent_span = None
+            if _get_local().agent_span and _get_local().agent_span.status == SpanStatus.RUNNING:
+                _get_local().agent_span.finish(SpanStatus.OK)
+                send(_get_local().agent_span)
+                _get_local().agent_span = None
             if _flow_span:
                 _flow_span.finish(SpanStatus.OK)
                 send(_flow_span)
@@ -143,14 +148,13 @@ def _patch_crewai():
 
     @crewai_event_bus.on(CrewKickoffFailedEvent)
     def _on_crew_failed(source, event):
-        global _flow_span, _agent_span
         _log("CREW_FAILED")
         try:
             _flush_pending_tools()
-            if _agent_span and _agent_span.status == SpanStatus.RUNNING:
-                _agent_span.finish(SpanStatus.ERROR)
-                send(_agent_span)
-                _agent_span = None
+            if _get_local().agent_span and _get_local().agent_span.status == SpanStatus.RUNNING:
+                _get_local().agent_span.finish(SpanStatus.ERROR)
+                send(_get_local().agent_span)
+                _get_local().agent_span = None
             if _flow_span:
                 _flow_span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
                 send(_flow_span)
@@ -162,55 +166,52 @@ def _patch_crewai():
 
     @crewai_event_bus.on(AgentExecutionStartedEvent)
     def _on_agent_start(source, event):
-        global _current_agent, _current_task, _agent_span
         try:
             agent = getattr(event, "agent", None)
             if agent:
-                _current_agent = getattr(agent, "role", "") or str(agent)[:80]
+                _get_local().current_agent = getattr(agent, "role", "") or str(agent)[:80]
             task = getattr(event, "task", None)
             if task:
-                _current_task = getattr(task, "description", "") or str(task)[:80]
+                _get_local().current_task = getattr(task, "description", "") or str(task)[:80]
 
             # Finish previous agent span if any
-            if _agent_span and _agent_span.status == SpanStatus.RUNNING:
-                _agent_span.finish(SpanStatus.OK)
-                send(_agent_span)
+            if _get_local().agent_span and _get_local().agent_span.status == SpanStatus.RUNNING:
+                _get_local().agent_span.finish(SpanStatus.OK)
+                send(_get_local().agent_span)
 
             # Create new agent span, parented under flow
-            _agent_span = Span(kind=SpanKind.AGENT, name=_current_agent or "Agent")
-            _agent_span.metadata["agent_role"] = _current_agent
-            _agent_span.metadata["task"] = _current_task[:100] if _current_task else ""
+            _get_local().agent_span = Span(kind=SpanKind.AGENT, name=_get_local().current_agent or "Agent")
+            _get_local().agent_span.metadata["agent_role"] = _get_local().current_agent
+            _get_local().agent_span.metadata["task"] = _get_local().current_task[:100] if _get_local().current_task else ""
             if _flow_span:
-                _agent_span.parent_id = _flow_span.id
-                _agent_span.trace_id = _flow_span.trace_id
-            _agent_span.start()
-            _log("AGENT_START: " + _current_agent[:40] + " id=" + _agent_span.id)
+                _get_local().agent_span.parent_id = _flow_span.id
+                _get_local().agent_span.trace_id = _flow_span.trace_id
+            _get_local().agent_span.start()
+            _log("AGENT_START: " + _get_local().current_agent[:40] + " id=" + _get_local().agent_span.id)
         except Exception as e:
             _log("AGENT_START err: " + str(e))
 
     @crewai_event_bus.on(AgentExecutionCompletedEvent)
     def _on_agent_completed(source, event):
-        global _agent_span
         _log("AGENT_COMPLETED")
         try:
             _flush_pending_tools()
-            if _agent_span and _agent_span.status == SpanStatus.RUNNING:
-                _agent_span.finish(SpanStatus.OK)
-                send(_agent_span)
-                _agent_span = None
+            if _get_local().agent_span and _get_local().agent_span.status == SpanStatus.RUNNING:
+                _get_local().agent_span.finish(SpanStatus.OK)
+                send(_get_local().agent_span)
+                _get_local().agent_span = None
         except Exception as e:
             _log("AGENT_COMPLETED err: " + str(e))
 
     @crewai_event_bus.on(AgentExecutionErrorEvent)
     def _on_agent_error(source, event):
-        global _agent_span
         _log("AGENT_ERROR")
         try:
             _flush_pending_tools()
-            if _agent_span:
-                _agent_span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
-                send(_agent_span)
-                _agent_span = None
+            if _get_local().agent_span:
+                _get_local().agent_span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
+                send(_get_local().agent_span)
+                _get_local().agent_span = None
         except Exception as e:
             _log("AGENT_ERROR err: " + str(e))
 
@@ -218,12 +219,11 @@ def _patch_crewai():
 
     @crewai_event_bus.on(TaskStartedEvent)
     def _on_task_start(source, event):
-        global _current_task
         try:
             task = getattr(event, "task", None)
             if task:
-                _current_task = getattr(task, "description", "") or str(task)[:80]
-            _log("TASK_START: " + _current_task[:60])
+                _get_local().current_task = getattr(task, "description", "") or str(task)[:80]
+            _log("TASK_START: " + _get_local().current_task[:60])
         except Exception as e:
             _log("TASK_START err: " + str(e))
 
@@ -234,12 +234,12 @@ def _patch_crewai():
         _log("LLM_STARTED")
         try:
             span = Span(kind=SpanKind.LLM_CALL, name="LLM")
-            span.metadata["agent"] = _current_agent
-            span.metadata["task"] = _current_task[:80] if _current_task else ""
+            span.metadata["agent"] = _get_local().current_agent
+            span.metadata["task"] = _get_local().current_task[:80] if _get_local().current_task else ""
             # Parent under current agent
-            if _agent_span:
-                span.parent_id = _agent_span.id
-                span.trace_id = _agent_span.trace_id
+            if _get_local().agent_span:
+                span.parent_id = _get_local().agent_span.id
+                span.trace_id = _get_local().agent_span.trace_id
             elif _flow_span:
                 span.trace_id = _flow_span.trace_id
             model = getattr(event, "model", None)
@@ -251,21 +251,21 @@ def _patch_crewai():
                 span.metadata["prompt_preview"] = str(msgs[-1])[:500]
             elif isinstance(msgs, str):
                 span.metadata["prompt_preview"] = msgs[:500]
-            _llm_stack.append(span)
+            _get_local().llm_stack.append(span)
         except Exception as e:
             _log("LLM_STARTED err: " + str(e))
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def _on_llm_completed(source, event):
-        _log("LLM_COMPLETED stack=" + str(len(_llm_stack)))
+        _log("LLM_COMPLETED stack=" + str(len(_get_local().llm_stack)))
         try:
-            if _llm_stack:
-                span = _llm_stack.pop()
+            if _get_local().llm_stack:
+                span = _get_local().llm_stack.pop()
             else:
                 span = Span(kind=SpanKind.LLM_CALL, name="llm_call")
-                if _agent_span:
-                    span.parent_id = _agent_span.id
-                    span.trace_id = _agent_span.trace_id
+                if _get_local().agent_span:
+                    span.parent_id = _get_local().agent_span.id
+                    span.trace_id = _get_local().agent_span.trace_id
                 span.start()
             if "model" not in span.metadata:
                 model = getattr(event, "model", None)
@@ -283,12 +283,12 @@ def _patch_crewai():
                 if tool_m:
                     action = "写文件" if "write_file" in tool_m.group(0) else "读文件"
                     span.name = action + " " + tool_m.group(1).split("/")[-1]
-                elif _current_task:
-                    span.name = _current_task[:50]
-                elif _current_agent:
-                    span.name = _current_agent[:50]
+                elif _get_local().current_task:
+                    span.name = _get_local().current_task[:50]
+                elif _get_local().current_agent:
+                    span.name = _get_local().current_agent[:50]
             if not span.name or span.name == "LLM":
-                fallback = _current_task or _current_agent or ""
+                fallback = _get_local().current_task or _get_local().current_agent or ""
                 if fallback:
                     span.name = fallback[:50]
                 elif "response_preview" in span.metadata:
@@ -306,8 +306,8 @@ def _patch_crewai():
     def _on_llm_failed(source, event):
         _log("LLM_FAILED")
         try:
-            if _llm_stack:
-                span = _llm_stack.pop()
+            if _get_local().llm_stack:
+                span = _get_local().llm_stack.pop()
                 span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
                 send(span)
         except Exception as e:
@@ -317,9 +317,8 @@ def _patch_crewai():
 
     def _flush_pending_tools():
         """Send any unfinished tool spans (called on agent/crew complete)."""
-        global _tool_stack
-        while _tool_stack:
-            span = _tool_stack.pop()
+        while _get_local().tool_stack:
+            span = _get_local().tool_stack.pop()
             if span.status == SpanStatus.RUNNING:
                 span.finish(SpanStatus.OK)
             send(span)
@@ -330,19 +329,19 @@ def _patch_crewai():
         _log("TOOL_START: " + tool_name)
         try:
             span = Span(kind=SpanKind.TOOL_CALL, name=tool_name)
-            span.metadata["agent"] = _current_agent
-            span.metadata["task"] = _current_task[:80] if _current_task else ""
+            span.metadata["agent"] = _get_local().current_agent
+            span.metadata["task"] = _get_local().current_task[:80] if _get_local().current_task else ""
             span.metadata["agent_role"] = getattr(event, "agent_role", "") or ""
-            if _agent_span:
-                span.parent_id = _agent_span.id
-                span.trace_id = _agent_span.trace_id
+            if _get_local().agent_span:
+                span.parent_id = _get_local().agent_span.id
+                span.trace_id = _get_local().agent_span.trace_id
             elif _flow_span:
                 span.trace_id = _flow_span.trace_id
             args = getattr(event, "tool_args", "")
             if args:
                 span.metadata["tool_input"] = str(args)[:500]
             span.start()
-            _tool_stack.append(span)
+            _get_local().tool_stack.append(span)
         except Exception as e:
             _log("TOOL_START err: " + str(e))
 
@@ -351,14 +350,14 @@ def _patch_crewai():
         tool_name = getattr(event, "tool_name", "") or "unknown_tool"
         _log("TOOL_END: " + tool_name)
         try:
-            if _tool_stack:
-                span = _tool_stack.pop()
+            if _get_local().tool_stack:
+                span = _get_local().tool_stack.pop()
             else:
                 # No matching start event — create best-effort span
                 span = Span(kind=SpanKind.TOOL_CALL, name=tool_name)
-                if _agent_span:
-                    span.parent_id = _agent_span.id
-                    span.trace_id = _agent_span.trace_id
+                if _get_local().agent_span:
+                    span.parent_id = _get_local().agent_span.id
+                    span.trace_id = _get_local().agent_span.trace_id
                 elif _flow_span:
                     span.trace_id = _flow_span.trace_id
                 span.start()
@@ -376,14 +375,14 @@ def _patch_crewai():
     def _on_tool_error(source, event):
         _log("TOOL_ERROR")
         try:
-            if _tool_stack:
-                span = _tool_stack.pop()
+            if _get_local().tool_stack:
+                span = _get_local().tool_stack.pop()
                 span.finish(SpanStatus.ERROR, str(getattr(event, "error", "")))
             else:
                 span = Span(kind=SpanKind.TOOL_CALL, name="tool_error")
-                if _agent_span:
-                    span.parent_id = _agent_span.id
-                    span.trace_id = _agent_span.trace_id
+                if _get_local().agent_span:
+                    span.parent_id = _get_local().agent_span.id
+                    span.trace_id = _get_local().agent_span.trace_id
                 elif _flow_span:
                     span.trace_id = _flow_span.trace_id
                 span.start()

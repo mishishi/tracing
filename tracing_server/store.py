@@ -1,10 +1,60 @@
-"""SQLite store for traces — simple, zero-config, single file."""
+from pathlib import Path
+import os
+
+# Pricing in RMB per 1M tokens. Source: official API docs as of 2025-Q3.
+# Models marked with (*) are best-effort estimates — verify against current docs.
+
+# ── Pricing loader ────────────────────────────────────────
+
+_PRICING_PATH = Path(os.environ.get(
+    'TRACING_PRICING_PATH',
+    Path(__file__).parent.parent / 'pricing.yaml'
+))
+_MODEL_PRICING = None  # type: dict | None
+
+def _load_pricing():
+    """Load model pricing from YAML config. Cached in memory."""
+    global _MODEL_PRICING
+    if _MODEL_PRICING is not None:
+        return _MODEL_PRICING
+    try:
+        with open(_PRICING_PATH, 'r', encoding='utf-8') as f:
+            raw = yaml.safe_load(f)
+        flat = {}
+        default_price = None
+        for _vendor, models in raw.items():
+            if not isinstance(models, dict):
+                continue
+            for model, price in models.items():
+                if model == 'unknown':
+                    default_price = price
+                elif isinstance(price, dict) and 'input' in price:
+                    flat[model] = {'input': float(price['input']), 'output': float(price['output'])}
+        if default_price:
+            flat['__default__'] = default_price
+        _MODEL_PRICING = flat
+        return flat
+    except Exception:
+        import logging
+        logging.getLogger("tracing.store").warning(
+            "Failed to load pricing.yaml, using built-in fallback")
+        _MODEL_PRICING = {
+            'gpt-4o':        {'input': 18.0,  'output': 72.0},
+            'gpt-4o-mini':   {'input': 1.08,  'output': 4.32},
+            'gpt-4.1':       {'input': 14.40, 'output': 57.60},
+            'gpt-5.5':       {'input': 36.25, 'output': 217.50},
+            'deepseek-chat': {'input': 1.02,  'output': 2.03},
+            '__default__':   {'input': 1.08,  'output': 4.32},
+        }
+        return _MODEL_PRICING
+
+
+# ──────────────────────────────────────────────────────────
 
 import sqlite3
 import json
-import os
 import re
-from pathlib import Path
+import yaml
 
 DB_PATH = Path(os.environ.get("TRACING_DB_PATH", Path.home() / ".tracing" / "traces.db"))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -250,38 +300,14 @@ def get_project_list() -> list[str]:
 
 # ── Model pricing (USD per 1M tokens) ──────────
 
-MODEL_PRICING = {
-    "gpt-4":                {"input": 30.00, "output": 60.00},
-    "gpt-4-32k":            {"input": 60.00, "output": 120.00},
-    "gpt-4-turbo":          {"input": 10.00, "output": 30.00},
-    "gpt-4o":               {"input": 2.50,  "output": 10.00},
-    "gpt-4o-mini":          {"input": 0.15,  "output": 0.60},
-    "gpt-4.1":              {"input": 2.00,  "output": 8.00},
-    "gpt-4.1-mini":         {"input": 0.40,  "output": 1.60},
-    "gpt-4.1-nano":         {"input": 0.10,  "output": 0.40},
-    "gpt-3.5-turbo":        {"input": 0.50,  "output": 1.50},
-    "gpt-3.5-turbo-0125":   {"input": 0.50,  "output": 1.50},
-    "gpt-5":                {"input": 1.25,  "output": 10.00},
-    "gpt-5-mini":           {"input": 0.25,  "output": 2.00},
-    "gpt-5-nano":           {"input": 0.05,  "output": 0.20},
-    "claude-3-opus":        {"input": 15.00, "output": 75.00},
-    "claude-3.5-sonnet":    {"input": 3.00,  "output": 15.00},
-    "claude-3.5-haiku":     {"input": 0.80,  "output": 4.00},
-    "claude-4-opus":        {"input": 15.00, "output": 75.00},
-    "claude-4-sonnet":      {"input": 3.00,  "output": 15.00},
-    "gemini-1.5-pro":       {"input": 1.25,  "output": 5.00},
-    "gemini-1.5-flash":     {"input": 0.075, "output": 0.30},
-    "gemini-2.5-pro":       {"input": 1.25,  "output": 10.00},
-    "gemini-2.5-flash":     {"input": 0.15,  "output": 0.60},
-    "deepseek-v3":          {"input": 0.27,  "output": 1.10},
-    "deepseek-r1":          {"input": 0.55,  "output": 2.19},
-}
+
 
 
 def _match_price(model: str) -> dict:
     """Match model name to pricing tier. Handles provider prefixes and versioned names."""
+    MODEL_PRICING = _load_pricing()
     if not model:
-        return {"input": 2.50, "output": 10.00}
+        return MODEL_PRICING.get("__default__", {"input": 1.08, "output": 4.32})
     m = model.lower().strip()
     # Strip provider prefix: openai/gpt-4o -> gpt-4o, anthropic/claude-3.5-sonnet -> claude-3.5-sonnet
     if "/" in m:
@@ -304,7 +330,7 @@ def _match_price(model: str) -> dict:
             if base.startswith(key):
                 return MODEL_PRICING[key]
     # Unknown model -> gpt-4o default
-    return {"input": 2.50, "output": 10.00}
+    return MODEL_PRICING.get("__default__", {"input": 1.08, "output": 4.32})
 
 
 def get_costs(project: str = "", days: int = 30) -> dict:

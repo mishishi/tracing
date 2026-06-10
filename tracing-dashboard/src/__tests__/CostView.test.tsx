@@ -47,7 +47,7 @@ describe('CostView', () => {
   it('renders total cost after data loads', async () => {
     render(<CostView endpoint="http://localhost:9200" />);
     await waitFor(() => {
-      expect(screen.getByText('$2.54')).toBeInTheDocument();
+      expect(screen.getByText('¥2.54')).toBeInTheDocument();
     });
   });
 

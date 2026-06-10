@@ -43,6 +43,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [allExpanded, setAllExpanded] = useState(true);
+  const [collapseTools, setCollapseTools] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'waterfall' | 'timeline'>('waterfall');
   const [showList, setShowList] = useState(true);
   const [viewGroupBy, setViewGroupBy] = useState<'trace' | 'session' | 'summary'>('trace');
@@ -200,8 +201,8 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
     selected.spans.filter((s) => s.kind === 'llm_call').forEach((s) => {
       const price = matchModelPrice(s.metadata.model);
       if (price) {
-        cost += (s.metadata.input_tokens || 0) / 1000 * price.input;
-        cost += (s.metadata.output_tokens || 0) / 1000 * price.output;
+        cost += (s.metadata.input_tokens || 0) / 1_000_000 * price.input;
+        cost += (s.metadata.output_tokens || 0) / 1_000_000 * price.output;
       }
     });
     return cost > 0 ? cost : null;
@@ -577,7 +578,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
             )}
             {viewMode === 'waterfall' && (
               <>
-                <WaterfallView trace={selected} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} highlightQuery={highlightQuery} />
+                <WaterfallView trace={selected} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} highlightQuery={highlightQuery} hideTools={collapseTools} />
                 {selectedSpanId && (() => {
                   const span = selected.spans.find((s) => s.id === selectedSpanId);
                   if (!span) return null;

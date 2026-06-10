@@ -150,9 +150,10 @@ interface WaterfallViewProps {
   selectedSpanId: string | null;
   onSelectSpan: (id: string) => void;
   highlightQuery?: string;
+  hideTools?: boolean;
 }
 
-export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedSpanId, onSelectSpan }: WaterfallViewProps) {
+export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedSpanId, onSelectSpan, highlightQuery = '', hideTools = false }: WaterfallViewProps) {
   const tree = useMemo(() => buildTree(trace.spans), [trace.spans]);
   const flat = useMemo(() => flattenTree(tree), [tree]);
   const maxDepth = useMemo(() => Math.max(...flat.map((n) => n.depth), 0), [flat]);
@@ -187,6 +188,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
       );
     }
     if (spanKindFilter !== 'all') r = r.filter((n) => n.span.kind === spanKindFilter);
+    if (hideTools) r = r.filter((n) => n.span.kind !== 'tool_call');
     if (spanStatusFilter !== 'all') r = r.filter((n) => n.span.status === spanStatusFilter);
     if (spanTagFilter.trim()) {
       const parts = spanTagFilter.split(':').map((s) => s.trim());
@@ -293,7 +295,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
             </button>
           )}
         </div>
-        {filteredFlat.length !== flat.length && (
+        {(filteredFlat.length !== flat.length || hideTools) && (
           <span className="text-[10px] text-gray-400">{filteredFlat.length}/{flat.length}</span>
         )}
       </div>
