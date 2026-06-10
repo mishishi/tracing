@@ -65,7 +65,7 @@ export function ErrorPanel({ endpoint, project = '' }: ErrorPanelProps) {
 
   useEffect(() => {
     fetchErrors();
-    const interval = setInterval(fetchErrors, 30_000);
+    const interval = setInterval(fetchErrors, 60_000);
     return () => clearInterval(interval);
   }, [endpoint, project]);
 

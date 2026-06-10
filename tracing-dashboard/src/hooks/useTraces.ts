@@ -30,7 +30,7 @@ interface UseTracesReturn {
   dismissNotification: () => void;
 }
 
-export function useTraces({ endpoint, pollInterval = 5000 }: UseTracesOptions): UseTracesReturn {
+export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions): UseTracesReturn {
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [filteredTraces, setFilteredTraces] = useState<TraceSummary[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);

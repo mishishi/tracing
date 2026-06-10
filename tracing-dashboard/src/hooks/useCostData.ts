@@ -52,7 +52,7 @@ interface UseCostDataReturn {
 export function useCostData({
   endpoint,
   project = '',
-  pollInterval = 30_000,
+  pollInterval = 60_000,
 }: UseCostDataOptions): UseCostDataReturn {
   const [data, setData] = useState<CostsData | null>(null);
   const [loading, setLoading] = useState(true);

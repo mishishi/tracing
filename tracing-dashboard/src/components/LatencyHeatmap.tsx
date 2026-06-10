@@ -51,7 +51,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
   useEffect(() => {
     setLoading(true);
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
+    const interval = setInterval(fetchData, 120_000);
     return () => clearInterval(interval);
   }, [endpoint, project, days]);
 

@@ -64,7 +64,7 @@ export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps
   useEffect(() => {
     setLoading(true);
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
+    const interval = setInterval(fetchData, 120_000);
     return () => clearInterval(interval);
   }, [endpoint, project]);
 
