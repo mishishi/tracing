@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { AlertCircle, AlertTriangle, BarChart3, TrendingDown } from 'lucide-react';
+import { AlertCircle, AlertTriangle, BarChart3, TrendingDown, ExternalLink } from 'lucide-react';
 import { SkeletonStats, SkeletonBlock } from './Skeleton';
 import { useNotification } from '../hooks/useNotification';
 
@@ -24,6 +24,8 @@ interface RecentError {
   project: string;
   error: string;
   start_time: string;
+  trace_id: string;
+  session_id: string;
 }
 
 interface ErrorStats {
@@ -42,9 +44,10 @@ const kindLabel: Record<string, string> = {
 interface ErrorPanelProps {
   endpoint: string;
   project?: string;
+  onNavigateToTrace?: (traceId: string) => void;
 }
 
-export function ErrorPanel({ endpoint, project = '' }: ErrorPanelProps) {
+export function ErrorPanel({ endpoint, project = '', onNavigateToTrace }: ErrorPanelProps) {
   const [data, setData] = useState<ErrorStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -208,7 +211,13 @@ export function ErrorPanel({ endpoint, project = '' }: ErrorPanelProps) {
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">最近错误 ({data.recent_errors.length})</h4>
           <div className="space-y-1 max-h-64 overflow-y-auto">
             {data.recent_errors.map((e) => (
-              <div key={e.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+              <div
+                key={e.id}
+                onClick={() => { if (e.trace_id) onNavigateToTrace?.(e.trace_id); }}
+                className={'flex items-start gap-3 p-2 rounded-lg transition-colors ' +
+                  (e.trace_id ? 'hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50')}
+                title={e.trace_id ? '点击查看 Trace: ' + e.trace_id : ''}
+              >
                 <AlertCircle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -218,6 +227,11 @@ export function ErrorPanel({ endpoint, project = '' }: ErrorPanelProps) {
                     </span>
                   </div>
                   <p className="text-[10px] text-red-500 mt-0.5 truncate">{e.error}</p>
+                  {e.trace_id && (
+                    <p className="text-[9px] text-gray-400 mt-0.5 font-mono truncate flex items-center gap-1">
+                      <ExternalLink className="w-2.5 h-2.5" />{e.trace_id.slice(0, 16)}...
+                    </p>
+                  )}
                 </div>
                 <span className="text-[9px] text-gray-400 shrink-0">{e.start_time?.slice(11, 16)}</span>
               </div>

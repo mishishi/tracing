@@ -222,7 +222,7 @@ function AppInner() {
           </div>
         )}
         {activeTab === 'costs' && <CostView endpoint={endpoint} />}
-        {activeTab === 'errors' && <ErrorPanel endpoint={endpoint} />}
+        {activeTab === 'errors' && <ErrorPanel endpoint={endpoint} onNavigateToTrace={(traceId) => { setSharedTraceId(traceId); setActiveTab('traces'); }} />}
         {activeTab === 'compare' && <ComparisonView endpoint={endpoint} />}
       </main>
 

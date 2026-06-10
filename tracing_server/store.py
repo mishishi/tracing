@@ -471,7 +471,7 @@ def get_error_stats(project: str = "", days: int = 30) -> dict:
 
         # Get recent error details (last 20)
         recent = db.execute(
-            f"SELECT id, name, kind, project, error, start_time "
+            f"SELECT id, name, kind, project, error, start_time, trace_id, session_id "
             f"FROM spans {where} AND status='error' "
             f"ORDER BY start_time DESC LIMIT 20",
             params
