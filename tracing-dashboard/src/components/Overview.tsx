@@ -1,3 +1,4 @@
+import { EmptyState } from './EmptyState';
 import { useState, useEffect } from 'react';
 import {
   Layers, BarChart3, DollarSign, AlertTriangle,
@@ -158,7 +159,7 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
         </div>
 
         {projects.length === 0 ? (
-          <p className="text-center py-8 text-xs text-gray-400">暂无数据，等待第一个 Span 上报</p>
+          <EmptyState title="暂无数据" description="等待第一个 Span 上报，或参照下方指引接入 SDK" showQuickStart />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">

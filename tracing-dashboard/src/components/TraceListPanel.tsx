@@ -1,4 +1,5 @@
 import { Search, Bell, RefreshCw, Minimize2, Maximize2, Inbox, Filter, X, GitCompare, Activity, Zap } from 'lucide-react';
+import { EmptyState } from './EmptyState';
 import { Dropdown } from './Dropdown';
 import { SkeletonTraceList } from './Skeleton';
 import type { TraceSummary } from '../utils/trace-utils';
@@ -214,10 +215,7 @@ export function TraceListPanel({
       {viewGroupBy === 'summary' && !loadingList && (
         <div className="flex-1 overflow-y-auto min-h-0 space-y-3">
           {Object.entries(grouped).length === 0 ? (
-            <div className="bento text-center py-8">
-              <Inbox className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">暂无追踪数据</p>
-            </div>
+            <EmptyState icon={<Inbox className="w-10 h-10" />} title="暂无追踪数据" description="还没有上报任何 Span，请先接入 SDK" showQuickStart />
           ) : (
             Object.entries(grouped).map(([project, g]) => (
               <div key={project} className="bento cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors" onClick={() => setProjectFilter(project)}>
@@ -268,10 +266,7 @@ export function TraceListPanel({
           {loadingList ? (
             <SkeletonTraceList />
           ) : paginatedTraces.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Inbox className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
-              <p className="text-sm text-gray-400">暂无追踪记录</p>
-            </div>
+            <EmptyState icon={<Inbox className="w-8 h-8" />} title="暂无追踪记录" className="py-8" />
           ) : (
             paginatedTraces.map((t) => (
               <button
