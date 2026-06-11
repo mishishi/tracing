@@ -28,6 +28,29 @@ app.add_middleware(
 
 # ── Register routers ──────────────────────────
 
+
+import time
+from collections import defaultdict
+
+# ── Rate limiter ──────────────────────────────
+
+_ingest_window: dict[str, list[float]] = defaultdict(list)
+_MAX_INGEST_PER_SECOND = 100
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path == "/spans" and request.method == "POST":
+        client = request.client.host if request.client else "unknown"
+        now = time.time()
+        _ingest_window[client] = [t for t in _ingest_window[client] if t > now - 1]
+        if len(_ingest_window[client]) >= _MAX_INGEST_PER_SECOND:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=429, content={"error": "rate limit exceeded", "retry_after": 1})
+        _ingest_window[client].append(now)
+    return await call_next(request)
+
+
+
 register_routers(app)
 
 

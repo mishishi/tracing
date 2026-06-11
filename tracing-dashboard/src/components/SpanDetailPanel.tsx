@@ -2,6 +2,7 @@ import { X, Copy, Zap, Wrench, Cpu, Clock, Layers, Tag, MessageSquare, Star, Edi
 import { useState, useEffect } from 'react';
 import type { Span } from '../utils/trace-utils';
 import { JsonBlock } from './JsonBlock';
+import { MessageView } from './MessageView';
 import { useToast } from './ToastProvider';
 
 /* ================================================
