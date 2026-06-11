@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Layers, Zap, Code2, Wrench, Activity,
+  Layers, Zap, Code2, Wrench, Activity, ChevronRight,
   AlertCircle, Clock,
   BarChart3, Search, Server, Filter, X, Inbox,
   Minimize2, Maximize2, RefreshCw, Copy, Download, Share2,
@@ -269,6 +269,22 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
           <>
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
               <div className="min-w-0 flex-1">
+                {/* Breadcrumb */}
+                <nav className="flex items-center gap-1 mb-1">
+                  <button onClick={() => closeDetail()} className="text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">追踪列表</button>
+                  <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600" />
+                  {(() => {
+                    const traceInfo = filteredTraces.find(t => t.trace_id === selected.trace_id);
+                    const proj = traceInfo?.project;
+                    return proj && proj !== 'default' ? (
+                      <>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400">{proj}</span>
+                        <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600" />
+                      </>
+                    ) : null;
+                  })()}
+                  <span className="text-[10px] font-mono text-indigo-500 truncate max-w-[160px]">{selected.trace_id.slice(0, 16)}...</span>
+                </nav>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">追踪详情</h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <p className="text-xs text-gray-400">{selected.span_count} 个 Span</p>
