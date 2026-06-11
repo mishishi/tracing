@@ -7,6 +7,7 @@ import {
   List, GanttChartSquare, Bell, FileDown, GitCompare,
 } from 'lucide-react';
 import { Dropdown } from './Dropdown';
+import { TraceListPanel } from './TraceListPanel';
 import { WaterfallView } from './WaterfallView';
 import { SpanDetailPanel } from './SpanDetailPanel';
 import { TimelineView } from './TimelineView';
@@ -219,283 +220,41 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
   // ── Render ──
   return (
     <div className="flex flex-col lg:flex-row gap-4" style={{ height: 'calc(100vh - 190px)' }}>
-      {/* ── Left panel ── */}
-      <div className={`w-full lg:w-80 shrink-0 flex-col gap-3 min-h-0 ${showList ? 'flex' : 'hidden lg:flex'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {viewGroupBy === 'trace' ? `追踪列表 ${filteredTraces.length > 0 ? `(${filteredTraces.length})` : ''}` : viewGroupBy === 'summary' ? '项目汇总' : `会话 ${sessions.length > 0 ? `(${sessions.length})` : ''}`}
-              </h2>
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg ml-1">
-                <button onClick={() => setViewGroupBy('trace')}
-                  className={'px-1.5 py-0.5 text-[9px] rounded ' + (viewGroupBy === 'trace' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
-                  追踪
-                </button>
-                <button onClick={() => setViewGroupBy('session')}
-                  className={'px-1.5 py-0.5 text-[9px] rounded ' + (viewGroupBy === 'session' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
-                  会话
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowList(!showList)}
-              className="lg:hidden p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
-              aria-label={showList ? '隐藏列表' : '显示列表'}
-            >
-              {showList ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {sseConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="SSE 已连接" />}
-            {newTraceCount > 0 && (
-              <button onClick={dismissNotification} className="relative p-1 text-amber-500 hover:text-amber-600 transition-colors" aria-label="新追踪通知">
-                <Bell className="w-4 h-4" />
-                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
-                  {newTraceCount > 9 ? '9+' : newTraceCount}
-                </span>
-              </button>
-            )}
-            <button onClick={() => { setSearchQuery(''); setProjectFilter(''); }} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="刷新">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        
-            {compareMode && compareTraceA && (
-              <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
-                <div className="flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400">
-                  <GitCompare className="w-3.5 h-3.5" />
-                  <span>选择第二个 Trace 进行对比 · A: <code className="font-mono bg-indigo-100 dark:bg-indigo-800 px-1 rounded text-[11px]">{compareTraceA.slice(0, 12)}...</code></span>
-                </div>
-                <button onClick={cancelCompare} className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-400 font-medium">取消</button>
-              </div>
-            )}
-        {/* Search + Filter */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜索 Trace ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-gray-400"
-            />
-          </div>
-          <Dropdown
-            options={projOpts}
-            value={projectFilter}
-            onChange={setProjectFilter}
-            placeholder="项目"
-            className="w-32"
-          />
-        </div>
-
-        {/* Stats cards */}
-        {stats && (
-          <div className="grid grid-cols-4 gap-1.5">
-            <StatCard icon={<Server className="w-4 h-4" />} label="Spans" value={String(stats.total_spans)} />
-            <StatCard icon={<Zap className="w-4 h-4" />} label="Tokens" value={fmtTokens(stats.total_tokens)} valueClass="text-indigo-600 dark:text-indigo-400" />
-            <StatCard icon={<Activity className="w-4 h-4" />} label="LLM" value={String(stats.by_kind.find(k => k.kind === 'llm_call')?.c || 0)} valueClass="text-amber-600 dark:text-amber-400" />
-            <StatCard icon={<Wrench className="w-4 h-4" />} label="工具" value={String(stats.by_kind.find(k => k.kind === 'tool_call')?.c || 0)} valueClass="text-emerald-600 dark:text-emerald-400" />
-          </div>
-        )}
-
-        {/* Filter bar */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            {['', 'ok', 'error'].map((s) => (
-              <button key={s} onClick={() => setStatusFilter(s)}
-                className={'px-2 py-0.5 text-[9px] font-medium rounded transition-all ' +
-                  (statusFilter === s ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>
-                {s === '' ? '全部状态' : s === 'ok' ? '成功' : '失败'}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            {['', 'flow', 'agent', 'llm_call', 'tool_call'].map((k) => (
-              <button key={k} onClick={() => setKindFilter(k)}
-                className={'px-2 py-0.5 text-[9px] font-medium rounded transition-all ' +
-                  (kindFilter === k ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>
-                {k === '' ? '全部类型' : k === 'flow' ? '流程' : k === 'agent' ? '智能体' : k === 'llm_call' ? 'LLM' : '工具'}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            {['', '1h', '6h', '24h', '7d'].map((tr) => (
-              <button key={tr} onClick={() => setTimeRange(tr)}
-                className={'px-2 py-0.5 text-[9px] font-medium rounded transition-all ' +
-                  (timeRange === tr ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>
-                {tr === '' ? '全部时间' : tr === '1h' ? '1小时' : tr === '6h' ? '6小时' : tr === '24h' ? '24小时' : '7天'}
-              </button>
-            ))}
-          </div>
-          {(statusFilter || kindFilter || timeRange) && (
-            <button onClick={() => { setStatusFilter(''); setKindFilter(''); setTimeRange(''); }}
-              className="px-2 py-0.5 text-[9px] text-gray-400 hover:text-red-500 transition-colors">
-              <X className="w-2.5 h-2.5 inline mr-0.5" />清除筛选
-            </button>
-          )}
-        </div>
-
-        {/* Summary view */}
-        {viewGroupBy === 'summary' && !loadingList && (
-          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
-            {(() => {
-              const groups: Record<string, { traces: typeof filteredTraces; totalMs: number }> = {};
-              filteredTraces.forEach((t) => {
-                const p = t.project || 'default';
-                if (!groups[p]) groups[p] = { traces: [], totalMs: 0 };
-                groups[p].traces.push(t);
-                groups[p].totalMs += t.total_duration_ms || 0;
-              });
-              return Object.entries(groups).map(([project, g]) => (
-                <div
-                  key={project}
-                  onClick={() => { setProjectFilter(project); setViewGroupBy('trace'); }}
-                  className="bento cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Server className="w-4 h-4 text-indigo-500" />
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{project}</span>
-                      <span className="tag text-[10px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500">{g.traces.length} 个追踪</span>
-                    </div>
-                    <span className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">点击查看 →</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-400 mb-0.5">平均耗时</p>
-                      <p className="text-xs font-mono font-semibold text-gray-700 dark:text-gray-300">
-                        {g.traces.length > 0 ? fmtMs(g.totalMs / g.traces.length) : '—'}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-400 mb-0.5">最早</p>
-                      <p className="text-[10px] font-mono text-gray-500">
-                        {g.traces[g.traces.length - 1] ? fmtTime(g.traces[g.traces.length - 1].start_time) : '—'}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[10px] text-gray-400 mb-0.5">最新</p>
-                      <p className="text-[10px] font-mono text-gray-500">
-                        {g.traces[0] ? fmtTime(g.traces[0].start_time) : '—'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ));
-            })()}
-            {filteredTraces.length === 0 && (
-              <div className="bento text-center py-8">
-                <Inbox className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">暂无追踪数据</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {viewGroupBy === 'summary' && loadingList && (
-          <div className="flex-1"><SkeletonTraceList /></div>
-        )}
-
-        {/* Trace list */}
-        {(viewGroupBy === 'trace' || viewGroupBy === 'session') && (
-          <>        {/* Trace list */}
-        <div className="flex-1 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 min-h-0">
-          {loadingList ? (
-            <SkeletonTraceList />
-          ) : paginatedTraces.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Inbox className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
-              <p className="text-sm text-gray-400">暂无追踪记录</p>
-            </div>
-          ) : (
-            paginatedTraces.map((t) => (
-              <button
-                key={t.trace_id}
-                onClick={() => { if (compareMode && compareTraceA) { selectCompareB(t.trace_id); } else { loadTrace(t.trace_id); } }}
-                className={
-                  'w-full text-left px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ' +
-                  (selected?.trace_id === t.trace_id ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-2 border-l-indigo-500' : '')
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate max-w-[160px]">
-                    {t.session_id || t.trace_id.slice(0, 12)}
-                  </span>
-                  <span className="text-[10px] text-gray-400">{fmtTime(t.start_time)}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-gray-400">{t.span_count} spans</span>
-                  {t.project && t.project !== 'default' && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                      {t.project}
-                    </span>
-                  )}
-                  <span className="text-[10px] text-gray-400">{fmtMs(t.total_duration_ms)}</span>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between text-xs text-gray-400">
-            <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="disabled:opacity-30 hover:text-gray-600">上一页</button>
-            <span>{page + 1} / {totalPages}</span>
-            <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="disabled:opacity-30 hover:text-gray-600">下一页</button>
-          </div>
-        )}
-          </>
-        )}
-
-      </div>
-
-      {viewGroupBy === 'session' && (
-        <div className="flex-1 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 min-h-0">
-          {sessionsLoading ? <SkeletonTraceList /> : sessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Layers className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
-              <p className="text-sm text-gray-400">暂无会话记录</p>
-            </div>
-          ) : (
-            sessions.map((s: any) => (
-              <button
-                key={s.session_id}
-                onClick={() => {
-                  setViewGroupBy('trace');
-                  // Auto-select first trace of this session
-                  const stid = s.session_id;
-                  if (stid) loadTrace(stid);
-                }}
-                className="w-full text-left px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate max-w-[160px]">
-                    {s.session_id.slice(0, 16)}
-                  </span>
-                  <span className="text-[10px] text-gray-400">{s.trace_count || 0} 个追踪</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-gray-400">{s.span_count || 0} spans</span>
-                  {s.project && s.project !== 'default' && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                      {s.project}
-                    </span>
-                  )}
-                  {s.error_count > 0 && (
-                    <span className="text-[9px] text-red-500">{s.error_count} 错误</span>
-                  )}
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      )}
+        <TraceListPanel
+          filteredTraces={filteredTraces}
+          projects={projects}
+          projectFilter={projectFilter}
+          setProjectFilter={setProjectFilter}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          kindFilter={kindFilter}
+          setKindFilter={setKindFilter}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+          page={page}
+          setPage={setPage}
+          totalPages={totalPages}
+          loadingList={loadingList}
+          newTraceCount={newTraceCount}
+          sseConnected={sseConnected}
+          dismissNotification={dismissNotification}
+          viewGroupBy={viewGroupBy}
+          setViewGroupBy={setViewGroupBy}
+          showList={showList}
+          setShowList={setShowList}
+          stats={stats}
+          sessions={sessions}
+          sessionsLoading={sessionsLoading}
+          selected={selected}
+          paginatedTraces={paginatedTraces}
+          loadTrace={loadTrace}
+          compareMode={compareMode}
+          compareTraceA={compareTraceA}
+          selectCompareB={selectCompareB}
+          cancelCompare={cancelCompare}
+        />
 
       {/* ── Right panel: detail ── */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
@@ -519,7 +278,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                     </span>
                   )}
                   {traceCost !== null && (
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">~${traceCost.toFixed(4)}</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">~¥{traceCost.toFixed(4)}</span>
                   )}
                 </div>
               </div>
