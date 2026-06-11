@@ -40,6 +40,8 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
   } = useCostData({ endpoint, project });
 
   const [trendMode, setTrendMode] = useState<'cost' | 'tokens'>('cost');
+  const [showQuota, setShowQuota] = useState(false);
+  const [quota, setQuota] = useState<number>(() => Number(localStorage.getItem('tracing-quota') || 0));
 
   if (loading) return <div className="space-y-6"><SkeletonStats /><SkeletonBlock rows={5} /><SkeletonBlock rows={3} /></div>;
 
@@ -100,7 +102,34 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {/* Quota Bar */}
+      {data && (
+        <div className="bento mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">本月配额</h4>
+            <button onClick={() => setShowQuota(!showQuota)} className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors">{showQuota ? '收起' : '设置'}</button>
+          </div>
+          {showQuota && (
+            <div className="flex items-center gap-2 mb-2">
+              <input type="number" min="0" step="1" value={quota || ''} onChange={(e) => { const v = Number(e.target.value); setQuota(v); localStorage.setItem('tracing-quota', String(v)); }} placeholder="月度配额..." className="w-24 px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" />
+              <span className="text-[10px] text-gray-400">元 / 月</span>
+            </div>
+          )}
+          {quota > 0 && (
+            <>
+              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div className={'h-full rounded-full transition-all ' + (data.total_cost / quota > 0.9 ? 'bg-red-500' : data.total_cost / quota > 0.7 ? 'bg-amber-500' : 'bg-indigo-500')} style={{ width: Math.min((data.total_cost / quota) * 100, 100) + '%' }} />
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-[10px] text-gray-400">已用 {fmtCost(data.total_cost)}</span>
+                <span className="text-[10px] text-gray-400">剩余 {fmtCost(Math.max(0, quota - data.total_cost))}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <div className="bento">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="w-4 h-4 text-emerald-500" />
