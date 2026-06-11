@@ -12,6 +12,7 @@ interface UseTracesReturn {
   stats: Stats | null;
   projects: string[];
   loadingList: boolean;
+  fetchError: string | null;
   newTraceCount: number;
   sseConnected: boolean;
   searchQuery: string;
@@ -36,6 +37,8 @@ export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions)
   const [stats, setStats] = useState<Stats | null>(null);
   const [projects, setProjects] = useState<string[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const retryRef = useRef(0);
   const [newTraceCount, setNewTraceCount] = useState(0);
   const [sseConnected, setSseConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,7 +94,7 @@ export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions)
         setProjects(Array.from(p).sort());
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') console.warn('Fetch traces failed:', err);
+        if (err.name !== 'AbortError') { setFetchError('数据加载失败，将在 ' + Math.min(retryRef.current * 5, 60) + ' 秒后重试'); retryRef.current = Math.min(retryRef.current + 1, 10); } else { retryRef.current = 0; }
       })
       .finally(() => {
         if (!ac.signal.aborted) setLoadingList(false);
@@ -105,7 +108,7 @@ export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions)
         if (sf !== lastStatsRef.current) { lastStatsRef.current = sf; setStats(s); }
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') console.warn('Fetch stats failed:', err);
+        if (err.name !== 'AbortError') { /* stats are non-critical, ignore */ }
       });
   }, [endpoint]);
 
@@ -217,5 +220,6 @@ export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions)
     setPage,
     totalPages,
     dismissNotification,
+    fetchError,
   };
 }
