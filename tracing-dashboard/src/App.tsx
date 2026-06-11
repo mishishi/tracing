@@ -35,7 +35,17 @@ function AppInner() {
   const endpoint = selected.url;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const hash = window.location.hash.replace('#', '') as Tab;
+    return TABS.find(t => t.key === hash) ? hash : 'overview';
+  });
+
+  // Sync activeTab to URL hash
+  useEffect(() => {
+    if (window.location.hash !== '#' + activeTab) {
+      window.history.replaceState(null, '', '#' + activeTab);
+    }
+  }, [activeTab]);
   const [globalProject, setGlobalProject] = useState('');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sharedTraceId, setSharedTraceId] = useState('');

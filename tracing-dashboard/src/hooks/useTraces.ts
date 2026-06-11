@@ -39,10 +39,18 @@ export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions)
   const [newTraceCount, setNewTraceCount] = useState(0);
   const [sseConnected, setSseConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [projectFilter, setProjectFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [kindFilter, setKindFilter] = useState('');
-  const [timeRange, setTimeRange] = useState('');
+  const [projectFilter, setProjectFilter] = useState(() => {
+    return new URLSearchParams(window.location.search).get('project') || '';
+  });
+  const [statusFilter, setStatusFilter] = useState(() => {
+    return new URLSearchParams(window.location.search).get('status') || '';
+  });
+  const [kindFilter, setKindFilter] = useState(() => {
+    return new URLSearchParams(window.location.search).get('kind') || '';
+  });
+  const [timeRange, setTimeRange] = useState(() => {
+    return new URLSearchParams(window.location.search).get('range') || '';
+  });
   const [page, setPage] = useState(0);
 
   const prevTraceRef = useRef(0);
@@ -165,6 +173,23 @@ export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions)
     setFilteredTraces(result);
     setPage(0);
   }, [traces, searchQuery, projectFilter]);
+
+  // Sync state to URL params (shallow, no history entry)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (projectFilter) params.set('project', projectFilter);
+    if (statusFilter) params.set('status', statusFilter);
+    if (kindFilter) params.set('kind', kindFilter);
+    if (timeRange) params.set('range', timeRange);
+    const qs = params.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    if (window.location.search !== `?${qs}`) {
+      window.history.replaceState(null, '', newUrl);
+    }
+  }, [projectFilter, statusFilter, kindFilter, timeRange]);
+
+  // Read initial state from URL params
+  const initialFromUrl = useRef(false);
 
   const dismissNotification = () => setNewTraceCount(0);
 
