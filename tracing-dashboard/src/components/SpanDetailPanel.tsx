@@ -45,6 +45,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
   const [localTags, setLocalTags] = useState<Record<string, string>>({});
   const [rating, setRating] = useState<number>(0);
   const [saving, setSaving] = useState(false);
+  const [expandAllIO, setExpandAllIO] = useState(false);
 
   useEffect(() => {
     const tags = span.metadata.tags || {};
@@ -208,10 +209,10 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                 </div>
               )}
               {metadata.tool_input && (
-                <JsonBlock label="输入" content={metadata.tool_input} maxHeight={120} />
+                <JsonBlock label="输入" content={metadata.tool_input} maxHeight={300} defaultExpanded={expandAllIO} />
               )}
               {metadata.tool_output && (
-                <JsonBlock label="输出" content={metadata.tool_output} maxHeight={120} />
+                <JsonBlock label="输出" content={metadata.tool_output} maxHeight={300} defaultExpanded={expandAllIO} />
               )}
             </div>
           </section>
@@ -221,7 +222,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {isLLM && metadata.prompt_preview && (
           <section>
             <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
-            <JsonBlock label="" content={metadata.prompt_preview} maxHeight={200} />
+            <JsonBlock label="" content={metadata.prompt_preview} maxHeight={400} defaultExpanded={expandAllIO} />
           </section>
         )}
 
@@ -229,7 +230,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {isLLM && metadata.response_preview && (
           <section>
             <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输出 Response</h4>
-            <JsonBlock label="" content={metadata.response_preview} maxHeight={200} />
+            <JsonBlock label="" content={metadata.response_preview} maxHeight={400} defaultExpanded={expandAllIO} />
           </section>
         )}
 

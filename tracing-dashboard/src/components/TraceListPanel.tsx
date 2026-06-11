@@ -1,4 +1,4 @@
-import { Search, Bell, RefreshCw, Minimize2, Maximize2, Inbox, Filter, X, GitCompare, Activity, Zap } from 'lucide-react';
+import { Search, Bell, RefreshCw, Minimize2, Maximize2, Inbox, Filter, X, GitCompare, Activity, Zap, Star } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { Dropdown } from './Dropdown';
 import { SkeletonTraceList } from './Skeleton';
