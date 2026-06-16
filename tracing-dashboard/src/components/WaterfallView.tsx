@@ -238,7 +238,10 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
         </div>
       </div>
 
-      {/* Zoom controls */}
+      {/* Zoom hint */}
+        <span className="text-[9px] text-gray-300 dark:text-gray-600 mr-2 select-none">滚轮缩放</span>
+
+        {/* Zoom controls */}
       <div className="flex items-center gap-1 px-2 py-1 border-b border-gray-100 dark:border-gray-800">
         <span className="text-[9px] text-gray-400 mr-1">{zoom.toFixed(1)}x</span>
         <button onClick={() => setZoom((z) => Math.max(1, z - 1))}

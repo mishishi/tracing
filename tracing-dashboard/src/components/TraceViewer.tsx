@@ -234,6 +234,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
   ];
 
   const paginatedTraces = filteredTraces.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const hasMore = (page + 1) * PAGE_SIZE < filteredTraces.length;
 
   // ── Render ──
   return (
@@ -259,7 +260,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
           setTimeRange={setTimeRange}
           page={page}
           setPage={setPage}
-          totalPages={totalPages}
+          hasMore={hasMore}
           loadingList={loadingList}
           newTraceCount={newTraceCount}
           sseConnected={sseConnected}

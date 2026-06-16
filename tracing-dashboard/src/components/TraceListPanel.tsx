@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, RefreshCw, Minimize2, Maximize2, Inbox, Filter, X, GitCompare, Activity, Zap, Star } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { Dropdown } from './Dropdown';
@@ -33,7 +33,7 @@ interface TraceListPanelProps {
   setTimeRange: (t: string) => void;
   page: number;
   setPage: (p: number) => void;
-  totalPages: number;
+  hasMore: boolean;
   loadingList: boolean;
   newTraceCount: number;
   sseConnected: boolean;
@@ -83,7 +83,7 @@ export function TraceListPanel({
   filteredTraces, projects, projectFilter, setProjectFilter,
   searchQuery, setSearchQuery, statusFilter, setStatusFilter,
   kindFilter, setKindFilter, timeRange, setTimeRange,
-  page, setPage, totalPages, loadingList,
+  page, setPage, hasMore, loadingList,
   newTraceCount, sseConnected, dismissNotification,
   viewGroupBy, setViewGroupBy, showList, setShowList, stats,
   sessions, sessionsLoading,
@@ -402,13 +402,43 @@ export function TraceListPanel({
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-gray-400">
-          <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="disabled:opacity-30 hover:text-gray-600">上一页</button>
-          <span>{page + 1} / {totalPages}</span>
-          <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="disabled:opacity-30 hover:text-gray-600">下一页</button>
-        </div>
+      {/* Infinite scroll sentinel */}
+      {hasMore && (
+        <InfiniteScrollSentinel
+          hasMore={hasMore}
+          onLoadMore={() => setPage(page + 1)}
+          loading={loadingList}
+        />
+      )}
+    </div>
+  );
+}
+
+
+function InfiniteScrollSentinel({ page, totalPages, onLoadMore, loading }: {
+  page: number; totalPages: number; onLoadMore: () => void; loading: boolean;
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || loading) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) onLoadMore(); },
+      { rootMargin: "100px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, onLoadMore, loading]);
+
+  if (!hasMore && !loading) return null;
+
+  return (
+    <div ref={sentinelRef} className="flex items-center justify-center py-3 shrink-0">
+      {loading ? (
+        <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      ) : (
+        <span className="text-[10px] text-gray-400">加载更多...</span>
       )}
     </div>
   );

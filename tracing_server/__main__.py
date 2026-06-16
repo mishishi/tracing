@@ -19,12 +19,12 @@ DEFAULT_LOG_CONFIG = {
     "formatters": {
         "default": {
             "format": "%(asctime)s %(levelname)-5s %(message)s",
-            "datefmt": "%m-%d %H:%M:%S",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
         "access": {
             "()": "uvicorn.logging.AccessFormatter",
-            "format": '%(asctime)s %(levelname)-5s %(client_addr)s - "%(request_line)s" %(status_code)s',
-            "datefmt": "%m-%d %H:%M:%S",
+            "format": "%(asctime)s %(levelname)-5s %(client_addr)s - \"%(request_line)s\" %(status_code)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
     "handlers": {

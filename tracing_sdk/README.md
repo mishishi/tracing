@@ -9,7 +9,12 @@
 ### 1. 安装
 
 ```bash
-pip install -e /path/to/tracing
+# 从本仓库的 tracing 目录安装（开发模式，代码改动即时生效）
+cd /path/to/multi-agent/tracing
+pip install -e .
+
+# 或者指定绝对路径
+pip install -e /path/to/multi-agent/tracing    # 把 /path/to/tracing 替换为 tracing 目录的实际路径
 ```
 
 ### 2. 启动 Tracing Server
