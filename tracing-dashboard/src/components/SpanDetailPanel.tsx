@@ -89,18 +89,18 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
             Span 详情
           </span>
-          <span className="tag text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500">
+          <span className="tag text-[11px] bg-gray-100 dark:bg-gray-800 text-gray-500">
             {kindLabel[span.kind] || span.kind}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={copyJson}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+            className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
             title="复制 JSON">
             <Copy className="w-4 h-4" />
           </button>
           <button onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+            className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
             title="关闭">
             <X className="w-4 h-4" />
           </button>
@@ -111,7 +111,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
         {/* Basic Info */}
         <section>
-          <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">基本信息</h4>
+          <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">基本信息</h4>
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
             <div className="flex flex-col gap-0.5">
               <span className="text-gray-400">名称</span>
@@ -133,7 +133,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-gray-400">Span ID</span>
-              <span className="text-gray-700 dark:text-gray-300 font-mono text-[10px] break-all">{span.id}</span>
+              <span className="text-gray-700 dark:text-gray-300 font-mono text-[11px] break-all">{span.id}</span>
             </div>
           </div>
         </section>
@@ -141,7 +141,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Model & Tokens (LLM only) */}
         {isLLM && (
           <section>
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
               <Zap className="w-3 h-3 inline mr-1" />模型 & Token
             </h4>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
@@ -170,7 +170,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Agent & Task */}
         {(metadata.agent || metadata.task || metadata.agent_role) && (
           <section>
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
               <Cpu className="w-3 h-3 inline mr-1" />Agent / Task
             </h4>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
@@ -199,7 +199,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Tool Info */}
         {isTool && (
           <section>
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
               <Wrench className="w-3 h-3 inline mr-1" />工具信息
             </h4>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
@@ -222,7 +222,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Prompt (LLM only) */}
         {isLLM && metadata.prompt_preview && (
           <section>
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
+            <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
             <JsonBlock label="" content={metadata.prompt_preview} maxHeight={400} defaultExpanded={expandAllIO} />
           </section>
         )}
@@ -230,14 +230,14 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Response (LLM only) */}
         {isLLM && metadata.response_preview && (
           <section>
-            <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输出 Response</h4>
+            <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输出 Response</h4>
             <JsonBlock label="" content={metadata.response_preview} maxHeight={400} defaultExpanded={expandAllIO} />
           </section>
         )}
 
         {/* Tags & Annotations */}
         <section>
-          <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+          <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
             <Tag className="w-3 h-3" />标注
           </h4>
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 text-xs">
@@ -246,12 +246,12 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                 {/* Display tags */}
                 <div className="flex flex-wrap gap-1.5">
                   {rating > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
                       <Star className="w-2.5 h-2.5 fill-current" /> {rating}/5
                     </span>
                   )}
                   {Object.entries(localTags).filter(([k]) => k !== 'rating').map(([k, v]) => (
-                    <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
+                    <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
                       {k}: {v}
                     </span>
                   ))}
@@ -260,7 +260,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                   )}
                 </div>
                 <button onClick={() => setEditing(true)}
-                  className="flex items-center gap-1 text-[10px] text-indigo-500 hover:text-indigo-600 transition-colors">
+                  className="flex items-center gap-1 text-[11px] text-indigo-500 hover:text-indigo-600 transition-colors">
                   <Edit3 className="w-3 h-3" /> 编辑标注
                 </button>
               </>
@@ -268,7 +268,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
               <>
                 {/* Rating */}
                 <div>
-                  <label className="text-[10px] text-gray-400 mb-1 block">评分</label>
+                  <label className="text-[11px] text-gray-400 mb-1 block">评分</label>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button key={n} onClick={() => setRating(n)}
@@ -280,7 +280,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                 </div>
                 {/* Tags input */}
                 <div>
-                  <label className="text-[10px] text-gray-400 mb-1 block">标签 (key:value, 逗号分隔)</label>
+                  <label className="text-[11px] text-gray-400 mb-1 block">标签 (key:value, 逗号分隔)</label>
                   <input type="text" value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     placeholder="bug, priority:high"
@@ -288,7 +288,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                 </div>
                 {/* Notes */}
                 <div>
-                  <label className="text-[10px] text-gray-400 mb-1 block">备注</label>
+                  <label className="text-[11px] text-gray-400 mb-1 block">备注</label>
                   <textarea value={notesInput}
                     onChange={(e) => setNotesInput(e.target.value)}
                     placeholder="添加备注..."
@@ -308,16 +308,16 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                     setLocalTags({ ...localTags, ...parsed });
                     setTagInput('');
                   }}
-                    className="text-[10px] text-indigo-500 hover:text-indigo-600">添加标签</button>
+                    className="text-[11px] text-indigo-500 hover:text-indigo-600">添加标签</button>
                   <button onClick={() => {
                     setLocalTags({});
                     setRating(0);
                     setTagInput('');
                     setNotesInput('');
                   }}
-                    className="text-[10px] text-gray-400 hover:text-red-500 ml-auto">清除</button>
+                    className="text-[11px] text-gray-400 hover:text-red-500 ml-auto">清除</button>
                   <button onClick={saveAnnotation} disabled={saving}
-                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors">
+                    className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors">
                     <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存'}
                   </button>
                 </div>
@@ -329,8 +329,8 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Error */}
         {span.error && (
           <section>
-            <h4 className="text-[10px] font-semibold text-red-400 uppercase tracking-wider mb-2">错误</h4>
-            <pre className="text-[10px] p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono">
+            <h4 className="text-[11px] font-semibold text-red-400 uppercase tracking-wider mb-2">错误</h4>
+            <pre className="text-[11px] p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono">
               {span.error}
             </pre>
           </section>
@@ -339,7 +339,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Raw JSON */}
         <section>
           <details>
-            <summary className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 mb-2">
+            <summary className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 mb-2">
               <Layers className="w-3 h-3 inline mr-1" />原始 JSON
             </summary>
             <JsonBlock label="" content={JSON.stringify(span, null, 2)} maxHeight={300} searchable />

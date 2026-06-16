@@ -305,30 +305,30 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
               <div className="min-w-0 flex-1">
                 {/* Breadcrumb */}
                 <nav className="flex items-center gap-1 mb-1">
-                  <button onClick={() => closeDetail()} className="text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">追踪列表</button>
+                  <button onClick={() => closeDetail()} className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">追踪列表</button>
                   <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600" />
                   {(() => {
                     const traceInfo = filteredTraces.find(t => t.trace_id === selected.trace_id);
                     const proj = traceInfo?.project;
                     return proj && proj !== 'default' ? (
                       <>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400">{proj}</span>
+                        <span className="text-[11px] text-gray-500 dark:text-gray-400">{proj}</span>
                         <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600" />
                       </>
                     ) : null;
                   })()}
-                  <span className="text-[10px] font-mono text-indigo-500 truncate max-w-[160px]">{selected.trace_id.slice(0, 16)}...</span>
+                  <span className="text-[11px] font-mono text-indigo-500 truncate max-w-[160px]">{selected.trace_id.slice(0, 16)}...</span>
                 </nav>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">追踪详情</h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <p className="text-xs text-gray-400">{filteredSpans.length !== selected.spans.length ? filteredSpans.length + ' / ' + selected.span_count : selected.span_count} 个 Span</p>
                   {traceTokens.total > 0 && (
-                    <span className="text-[10px] text-indigo-500 font-mono">
+                    <span className="text-[11px] text-indigo-500 font-mono">
                       {fmtTokens(traceTokens.total)} tokens · 入{fmtTokens(traceTokens.input)} / 出{fmtTokens(traceTokens.output)}
                     </span>
                   )}
                   {traceCost !== null && (
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">~¥{traceCost.toFixed(4)}</span>
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">~¥{traceCost.toFixed(4)}</span>
                   )}
                 </div>
               </div>
@@ -341,7 +341,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                   placeholder="搜索 Span..."
                   value={spanSearchQuery}
                   onChange={(e) => setSpanSearchQuery(e.target.value)}
-                  className="w-28 pl-7 pr-2 py-1 text-[10px] rounded border bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-gray-400"
+                  className="w-28 pl-7 pr-2 py-1 text-[11px] rounded border bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-gray-400"
                 />
                 {spanSearchQuery && (
                   <button onClick={() => setSpanSearchQuery('')}
@@ -371,7 +371,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                     </button>
                   ))}
                 </div>
-                <button onClick={toggleAll} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label={allExpanded ? '折叠全部' : '展开全部'}>
+                <button onClick={toggleAll} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label={allExpanded ? '折叠全部' : '展开全部'}>
                   {allExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
                 {!compareMode && selected && (
@@ -380,19 +380,19 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                   </button>
                 )}
 
-                <button onClick={shareTrace} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="分享">
+                <button onClick={shareTrace} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="分享">
                   <Share2 className="w-4 h-4" />
                 </button>
-                <button onClick={exportTrace} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="导出 JSON">
+                <button onClick={exportTrace} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="导出 JSON">
                   <Download className="w-4 h-4" />
                 </button>
-                <button onClick={exportCSV} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="导出 CSV">
+                <button onClick={exportCSV} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="导出 CSV">
                   <FileDown className="w-4 h-4" />
                 </button>
-                <button onClick={() => copyTraceId(selected.trace_id)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="复制 Trace ID">
+                <button onClick={() => copyTraceId(selected.trace_id)} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="复制 Trace ID">
                   <Copy className="w-4 h-4" />
                 </button>
-                <button onClick={closeDetail} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="关闭">
+                <button onClick={closeDetail} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="关闭">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -436,7 +436,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                       >
                         <span className="shrink-0">{kindIcons[s.kind] || <Code2 className="w-3.5 h-3.5" />}</span>
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate flex-1">{s.name || kindLabel[s.kind]}</span>
-                        <span className="text-[10px] text-gray-400">{fmtMs(s.duration_ms)}</span>
+                        <span className="text-[11px] text-gray-400">{fmtMs(s.duration_ms)}</span>
                         {statusIcon(s.status)}
                         <span className={kindColor[s.kind] + ' w-1.5 h-1.5 rounded-full'} />
                       </button>

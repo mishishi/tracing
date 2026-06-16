@@ -104,7 +104,7 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
         <div className="flex items-center gap-2 mb-3">
           <Layers className="w-4 h-4 text-indigo-500" />
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">选择对比项目</h4>
-          <span className="text-[10px] text-gray-400">（至少选 2 个）</span>
+          <span className="text-[11px] text-gray-400">（至少选 2 个）</span>
         </div>
         <MultiSelect
           options={projectOptions}
@@ -114,13 +114,13 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
           className="max-w-md"
         />
         <div className="flex items-center gap-2 mt-3">
-          <span className="text-[10px] text-gray-400">时间范围:</span>
+          <span className="text-[11px] text-gray-400">时间范围:</span>
           <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
             {[7, 30, 90].map((d) => (
               <button
                 key={d}
                 onClick={() => setPeriod(d)}
-                className={'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' +
+                className={'px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ' +
                   (period === d ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
               >
                 {d === 7 ? '7天' : d === 30 ? '30天' : '90天'}
@@ -329,7 +329,7 @@ function TrendChart({
             <button
               key={m}
               onClick={() => onMetricChange(m)}
-              className={'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' +
+              className={'px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ' +
                 (metric === m ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
             >
               {metricLabel[m]}
@@ -345,7 +345,7 @@ function TrendChart({
           return (
             <div key={p} className="flex items-center gap-1">
               <span className="w-3 h-0.5 rounded" style={{ backgroundColor: color }} />
-              <span className="text-[10px] text-gray-500 truncate max-w-[100px]">{p}</span>
+              <span className="text-[11px] text-gray-500 truncate max-w-[100px]">{p}</span>
             </div>
           );
         })}

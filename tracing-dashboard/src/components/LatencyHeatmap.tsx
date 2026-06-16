@@ -138,7 +138,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
             {data.hours.map((h) => (
               <div
                 key={h}
-                className="flex-1 text-center text-[9px] text-gray-400 font-mono"
+                className="flex-1 text-center text-[11px] text-gray-400 font-mono"
                 title={`${h}:00 - ${h}:59`}
               >
                 {h}时
@@ -158,7 +158,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: kindColor[kind] || '#888' }}
                 />
-                <span className="text-[9px] sm:text-[10px] text-gray-500 truncate w-8 sm:w-auto">
+                <span className="text-[11px] sm:text-[11px] text-gray-500 truncate w-8 sm:w-auto">
                   {kindLabel[kind] || kind}
                 </span>
               </div>
@@ -190,14 +190,14 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
 
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-            <span className="text-[9px] text-gray-400">快</span>
+            <span className="text-[11px] text-gray-400">快</span>
             <div className="flex h-3 rounded-full overflow-hidden" style={{ width: 120 }}>
               <div className="flex-1" style={{ backgroundColor: isDark ? 'rgb(100, 170, 30)' : 'rgb(180, 220, 70)' }} />
               <div className="flex-1" style={{ backgroundColor: isDark ? 'rgb(180, 120, 25)' : 'rgb(220, 160, 50)' }} />
               <div className="flex-1" style={{ backgroundColor: isDark ? 'rgb(220, 60, 20)' : 'rgb(235, 70, 40)' }} />
             </div>
-            <span className="text-[9px] text-gray-400">慢</span>
-            <span className="text-[9px] text-gray-400 ml-auto">
+            <span className="text-[11px] text-gray-400">慢</span>
+            <span className="text-[11px] text-gray-400 ml-auto">
               最大: {fmtMs(maxAvg)}
             </span>
           </div>

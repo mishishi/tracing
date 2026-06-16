@@ -43,10 +43,10 @@ export function MessageView({ content, maxHeight = 400 }: MessageViewProps) {
               {cfg.icon}
             </div>
             <div className="min-w-0 flex-1">
-              <span className={`text-[9px] font-semibold uppercase tracking-wider ${cfg.text}`}>
+              <span className={`text-[11px] font-semibold uppercase tracking-wider ${cfg.text}`}>
                 {cfg.label}
               </span>
-              <pre className="text-[10px] mt-1 whitespace-pre-wrap font-sans text-gray-700 dark:text-gray-300 leading-relaxed break-words">
+              <pre className="text-[11px] mt-1 whitespace-pre-wrap font-sans text-gray-700 dark:text-gray-300 leading-relaxed break-words">
                 {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2)}
               </pre>
             </div>

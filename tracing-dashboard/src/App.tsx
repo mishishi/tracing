@@ -155,7 +155,7 @@ function AppInner() {
                           }
                         >
                           <span className="block font-medium">{ep.name}</span>
-                          <span className="block text-[10px] text-gray-400 font-mono">{ep.url}</span>
+                          <span className="block text-[11px] text-gray-400 font-mono">{ep.url}</span>
                         </button>
                         {endpoints.length > 1 && (
                           <button onClick={() => removeEndpoint(ep.id)}
@@ -187,14 +187,14 @@ function AppInner() {
 
             {/* Density toggle — hidden on mobile */}
             <button onClick={() => setDensity(d => d === 'compact' ? 'comfortable' : 'compact')}
-              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               aria-label={density === 'compact' ? '舒适模式' : '紧凑模式'}>
               {density === 'compact' ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </button>
 
             {/* Theme — hidden on mobile */}
             <button onClick={toggleTheme}
-              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               aria-label="切换主题">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -220,7 +220,7 @@ function AppInner() {
               <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
               <button onClick={() => { setShortcutsOpen(true); setMobileMenuOpen(false); }}
                 className="w-full flex items-center gap-2 px-3 py-3 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors min-h-[44px]">
-                <span className="text-[9px] font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">?</span>
+                <span className="text-[11px] font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">?</span>
                 键盘快捷键
               </button>
               <button onClick={() => { exportToPdf(); setMobileMenuOpen(false); }}
@@ -276,7 +276,7 @@ function AppInner() {
       <footer className="border-t border-gray-200 dark:border-gray-800 py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-[11px] text-gray-400">
           <span>追踪面板 v0.2.0</span>
-          <span className="font-mono text-[10px] hidden sm:inline">{endpoint}</span>
+          <span className="font-mono text-[11px] hidden sm:inline">{endpoint}</span>
         </div>
       </footer>
     </div>

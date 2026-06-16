@@ -98,7 +98,7 @@ function WaterfallRow({
           )}
         </div>
         <span className="text-gray-400 shrink-0">{kindIcons[span.kind] || kindIcons.phase}</span>
-        <span className="text-[10px] sm:text-[11px] text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">
+        <span className="text-[11px] sm:text-[11px] text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">
           {span.name || kindLabel[span.kind] || span.kind}
         </span>
       </div>
@@ -123,7 +123,7 @@ function WaterfallRow({
           style={{ left: leftPct + '%', width: Math.max(widthPct, 0.4) + '%' }}
         >
           {widthPct > 8 && (
-            <span className="text-[8px] sm:text-[9px] text-white font-medium truncate leading-none mix-blend-difference">
+            <span className="text-[8px] sm:text-[11px] text-white font-medium truncate leading-none mix-blend-difference">
               {fmtMs(span.duration_ms)}
             </span>
           )}
@@ -132,7 +132,7 @@ function WaterfallRow({
         {/* Status indicator */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {span.status === 'error' && (
-            <span className="text-[9px] text-red-500 font-medium truncate max-w-[120px]">{span.error}</span>
+            <span className="text-[11px] text-red-500 font-medium truncate max-w-[120px]">{span.error}</span>
           )}
           {statusIcon(span.status)}
         </div>
@@ -225,12 +225,12 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
       {/* Time axis */}
       <div className="flex items-stretch border-b border-gray-100 dark:border-gray-800 mb-1">
         <div className="w-[100px] sm:w-[160px] lg:w-[220px] shrink-0 py-1 px-1 sm:px-2">
-          <span className="text-[10px] text-gray-400 uppercase font-semibold">Span</span>
+          <span className="text-[11px] text-gray-400 uppercase font-semibold">Span</span>
         </div>
         <div className="flex-1 relative py-1 pr-3">
           {[0, 25, 50, 75, 100].map((pct) => (
             <div key={pct} className="absolute top-0" style={{ left: pct + '%' }}>
-              <span className="text-[9px] text-gray-400 font-mono -translate-x-1/2 block">
+              <span className="text-[11px] text-gray-400 font-mono -translate-x-1/2 block">
                 {fmtMs(visibleStart + visibleDuration * pct / 100)}
               </span>
             </div>
@@ -239,17 +239,17 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
       </div>
 
       {/* Zoom hint */}
-        <span className="text-[9px] text-gray-300 dark:text-gray-600 mr-2 select-none">滚轮缩放</span>
+        <span className="text-[11px] text-gray-300 dark:text-gray-600 mr-2 select-none">滚轮缩放</span>
 
         {/* Zoom controls */}
       <div className="flex items-center gap-1 px-2 py-1 border-b border-gray-100 dark:border-gray-800">
-        <span className="text-[9px] text-gray-400 mr-1">{zoom.toFixed(1)}x</span>
+        <span className="text-[11px] text-gray-400 mr-1">{zoom.toFixed(1)}x</span>
         <button onClick={() => setZoom((z) => Math.max(1, z - 1))}
-          className="px-1.5 py-0.5 text-[9px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">-</button>
+          className="px-1.5 py-0.5 text-[11px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">-</button>
         <button onClick={() => setZoom((z) => Math.min(20, z + 1))}
-          className="px-1.5 py-0.5 text-[9px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">+</button>
+          className="px-1.5 py-0.5 text-[11px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">+</button>
         <button onClick={() => { setZoom(1); setPan(0); }}
-          className="px-1.5 py-0.5 text-[9px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 ml-1">reset</button>
+          className="px-1.5 py-0.5 text-[11px] rounded bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 ml-1">reset</button>
       </div>
       {/* Span filters */}
       <div className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 flex-wrap">
@@ -264,7 +264,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
           />
           {spanSearch && (
             <button onClick={() => setSpanSearch('')} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
-              <span className="text-[10px]">✕</span>
+              <span className="text-[11px]">✕</span>
             </button>
           )}
         </div>
@@ -302,12 +302,12 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
           />
           {spanTagFilter && (
             <button onClick={() => setSpanTagFilter('')} className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600" aria-label="清除标签筛选">
-              <span className="text-[10px]">✕</span>
+              <span className="text-[11px]">✕</span>
             </button>
           )}
         </div>
         {(filteredFlat.length !== flat.length || hideTools) && (
-          <span className="text-[10px] text-gray-400">{filteredFlat.length}/{flat.length}</span>
+          <span className="text-[11px] text-gray-400">{filteredFlat.length}/{flat.length}</span>
         )}
       </div>
 

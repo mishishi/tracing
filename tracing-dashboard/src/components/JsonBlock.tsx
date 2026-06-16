@@ -30,7 +30,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] text-gray-400">{label}</span>
+        <span className="text-[11px] text-gray-400">{label}</span>
         <div className="flex items-center gap-1">
           {searchable && (
             <div className="relative">
@@ -40,7 +40,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="搜索..."
-                className="w-24 text-[10px] pl-5 pr-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                className="w-24 text-[11px] pl-5 pr-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
               />
             </div>
           )}
@@ -63,7 +63,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
         </div>
       </div>
       <pre
-        className="text-[10px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-auto whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
+        className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-auto whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
         style={{ maxHeight: expanded ? 'none' : maxHeight }}
         onClick={needsExpand && !expanded ? () => setExpanded(true) : undefined}
       >
@@ -72,7 +72,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
       {needsExpand && !expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="w-full text-[10px] text-gray-400 hover:text-indigo-500 py-1 transition-colors"
+          className="w-full text-[11px] text-gray-400 hover:text-indigo-500 py-1 transition-colors"
         >
           点击展开完整内容...
         </button>

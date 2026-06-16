@@ -155,7 +155,7 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
         <div className="flex items-center gap-2 mb-4">
           <Layers className="w-4 h-4 text-indigo-500" />
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">项目汇总</h3>
-          <span className="text-[10px] text-gray-400 ml-auto">{projects.length} 个项目</span>
+          <span className="text-[11px] text-gray-400 ml-auto">{projects.length} 个项目</span>
         </div>
 
         {projects.length === 0 ? (
@@ -220,13 +220,13 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
                 className="flex items-center justify-between py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-[10px] font-mono text-gray-400 w-12 shrink-0">{t.trace_id.slice(0, 8)}</span>
-                  <span className="tag text-[10px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shrink-0">{t.project}</span>
+                  <span className="text-[11px] font-mono text-gray-400 w-12 shrink-0">{t.trace_id.slice(0, 8)}</span>
+                  <span className="tag text-[11px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shrink-0">{t.project}</span>
                   <span className="text-xs text-gray-500 truncate hidden sm:inline">{t.span_count} spans</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[10px] text-gray-400 font-mono">{fmtMs(t.total_duration_ms)}</span>
-                  <span className="text-[10px] text-gray-400 hidden sm:inline">{fmtTime(t.start_time)}</span>
+                  <span className="text-[11px] text-gray-400 font-mono">{fmtMs(t.total_duration_ms)}</span>
+                  <span className="text-[11px] text-gray-400 hidden sm:inline">{fmtTime(t.start_time)}</span>
                 </div>
               </div>
             ))}
@@ -257,8 +257,8 @@ function StatCard({ icon, label, value, color, sub }: {
       </div>
       <div>
         <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{value}</p>
-        <p className="text-[10px] text-gray-400">{label}</p>
-        {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+        <p className="text-[11px] text-gray-400">{label}</p>
+        {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
       </div>
     </div>
   );

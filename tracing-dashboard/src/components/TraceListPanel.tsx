@@ -127,11 +127,11 @@ export function TraceListPanel({
             </h2>
             <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg ml-1">
               <button onClick={() => setViewGroupBy('trace')}
-                className={'px-1.5 py-0.5 text-[9px] rounded ' + (viewGroupBy === 'trace' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
+                className={'px-1.5 py-0.5 text-[11px] rounded ' + (viewGroupBy === 'trace' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
                 追踪
               </button>
               <button onClick={() => setViewGroupBy('session')}
-                className={'px-1.5 py-0.5 text-[9px] rounded ' + (viewGroupBy === 'session' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
+                className={'px-1.5 py-0.5 text-[11px] rounded ' + (viewGroupBy === 'session' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400')}>
                 会话
               </button>
             </div>
@@ -230,12 +230,12 @@ export function TraceListPanel({
             <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-3">
               <div className="space-y-3">
                 <div>
-                  <span className="text-[9px] text-gray-400 uppercase font-semibold mb-1.5 block">状态</span>
+                  <span className="text-[11px] text-gray-400 uppercase font-semibold mb-1.5 block">状态</span>
                   <div className="flex flex-wrap gap-1">
                     {statusOpts.map((o) => (
                       <button key={o.value}
                         onClick={() => { setStatusFilter(o.value); setShowFilterPopover(false); }}
-                        className={"px-2.5 py-1 text-[10px] rounded-md transition-colors " +
+                        className={"px-2.5 py-1 text-[11px] rounded-md transition-colors " +
                           (statusFilter === o.value ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium" : "bg-gray-50 dark:bg-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600")}>
                         {o.label}
                       </button>
@@ -243,12 +243,12 @@ export function TraceListPanel({
                   </div>
                 </div>
                 <div>
-                  <span className="text-[9px] text-gray-400 uppercase font-semibold mb-1.5 block">类型</span>
+                  <span className="text-[11px] text-gray-400 uppercase font-semibold mb-1.5 block">类型</span>
                   <div className="flex flex-wrap gap-1">
                     {kindOpts.map((o) => (
                       <button key={o.value}
                         onClick={() => { setKindFilter(o.value); setShowFilterPopover(false); }}
-                        className={"px-2.5 py-1 text-[10px] rounded-md transition-colors " +
+                        className={"px-2.5 py-1 text-[11px] rounded-md transition-colors " +
                           (kindFilter === o.value ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium" : "bg-gray-50 dark:bg-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600")}>
                         {o.label}
                       </button>
@@ -256,12 +256,12 @@ export function TraceListPanel({
                   </div>
                 </div>
                 <div>
-                  <span className="text-[9px] text-gray-400 uppercase font-semibold mb-1.5 block">时间</span>
+                  <span className="text-[11px] text-gray-400 uppercase font-semibold mb-1.5 block">时间</span>
                   <div className="flex flex-wrap gap-1">
                     {timeOpts.map((o) => (
                       <button key={o.value}
                         onClick={() => { setTimeRange(o.value); setShowFilterPopover(false); }}
-                        className={"px-2.5 py-1 text-[10px] rounded-md transition-colors " +
+                        className={"px-2.5 py-1 text-[11px] rounded-md transition-colors " +
                           (timeRange === o.value ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium" : "bg-gray-50 dark:bg-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600")}>
                         {o.label}
                       </button>
@@ -285,30 +285,30 @@ export function TraceListPanel({
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{project}</h4>
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <div>
-                    <p className="text-[10px] text-gray-400">追踪数</p>
+                    <p className="text-[11px] text-gray-400">追踪数</p>
                     <p className="text-xs font-mono font-semibold">{g.traces.length}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-400">错误</p>
+                    <p className="text-[11px] text-gray-400">错误</p>
                     <p className="text-xs font-mono font-semibold text-red-500">{g.errorCount}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="text-center">
-                    <p className="text-[10px] text-gray-400 mb-0.5">平均耗时</p>
+                    <p className="text-[11px] text-gray-400 mb-0.5">平均耗时</p>
                     <p className="text-xs font-mono font-semibold text-gray-700 dark:text-gray-300">
                       {g.traces.length > 0 ? fmtMs(g.totalMs / g.traces.length) : '—'}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] text-gray-400 mb-0.5">最早</p>
-                    <p className="text-[10px] font-mono text-gray-500">
+                    <p className="text-[11px] text-gray-400 mb-0.5">最早</p>
+                    <p className="text-[11px] font-mono text-gray-500">
                       {g.traces[g.traces.length - 1] ? fmtTime(g.traces[g.traces.length - 1].start_time) : '—'}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] text-gray-400 mb-0.5">最新</p>
-                    <p className="text-[10px] font-mono text-gray-500">
+                    <p className="text-[11px] text-gray-400 mb-0.5">最新</p>
+                    <p className="text-[11px] font-mono text-gray-500">
                       {g.traces[0] ? fmtTime(g.traces[0].start_time) : '—'}
                     </p>
                   </div>
@@ -344,22 +344,22 @@ export function TraceListPanel({
                   <span className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate max-w-[160px]">
                     {t.session_id || t.trace_id.slice(0, 12)}
                   </span>
-                  <span className="text-[10px] text-gray-400">{fmtTime(t.start_time)}</span>
+                  <span className="text-[11px] text-gray-400">{fmtTime(t.start_time)}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-gray-400">{t.span_count} spans</span>
+                  <span className="text-[11px] text-gray-400">{t.span_count} spans</span>
                   {(t as any).avg_rating > 0 && (
                     <span className="flex items-center gap-0.5">
                       <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                      <span className="text-[9px] text-amber-500">{(t as any).avg_rating}</span>
+                      <span className="text-[11px] text-amber-500">{(t as any).avg_rating}</span>
                     </span>
                   )}
                   {t.project && t.project !== 'default' && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                       {t.project}
                     </span>
                   )}
-                  <span className="text-[10px] text-gray-400">{fmtMs(t.total_duration_ms)}</span>
+                  <span className="text-[11px] text-gray-400">{fmtMs(t.total_duration_ms)}</span>
                 </div>
               </button>
             ))
@@ -388,14 +388,14 @@ export function TraceListPanel({
                 <div>
                   <span className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate block max-w-[200px]">{s.session_id}</span>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-gray-400">{s.trace_count} traces</span>
-                    <span className="text-[10px] text-gray-400">{s.span_count} spans</span>
+                    <span className="text-[11px] text-gray-400">{s.trace_count} traces</span>
+                    <span className="text-[11px] text-gray-400">{s.span_count} spans</span>
                     {s.error_count > 0 && (
-                      <span className="text-[10px] text-red-500">{s.error_count} errors</span>
+                      <span className="text-[11px] text-red-500">{s.error_count} errors</span>
                     )}
                   </div>
                 </div>
-                <span className="text-[9px] text-gray-400 shrink-0">{fmtTime(s.first_time)}</span>
+                <span className="text-[11px] text-gray-400 shrink-0">{fmtTime(s.first_time)}</span>
               </div>
             ))
           )}
@@ -438,7 +438,7 @@ function InfiniteScrollSentinel({ page, totalPages, onLoadMore, loading }: {
       {loading ? (
         <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
       ) : (
-        <span className="text-[10px] text-gray-400">加载更多...</span>
+        <span className="text-[11px] text-gray-400">加载更多...</span>
       )}
     </div>
   );

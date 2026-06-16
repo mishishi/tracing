@@ -50,7 +50,7 @@ export function EmptyState({
             </a>
             <span className="text-gray-300 dark:text-gray-600">·</span>
             <span className="text-gray-400">
-              启动 Dashboard: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[10px]">trace-server</code>
+              启动 Dashboard: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[11px]">trace-server</code>
             </span>
           </div>
         </div>

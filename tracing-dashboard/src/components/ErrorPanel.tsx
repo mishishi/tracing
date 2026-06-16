@@ -128,30 +128,30 @@ export function ErrorPanel({ endpoint, project = '', onNavigateToTrace }: ErrorP
         <div className="bento">
           <div className="flex items-center gap-2 mb-2">
             <AlertCircle className="w-4 h-4 text-red-500" />
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">总错误数</span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">总错误数</span>
           </div>
           <p className="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">{data.total_errors}</p>
-          <p className="text-[10px] text-gray-400 mt-1">近 30 天</p>
+          <p className="text-[11px] text-gray-400 mt-1">近 30 天</p>
         </div>
         <div className="bento">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown className="w-4 h-4 text-indigo-500" />
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">错误率</span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">错误率</span>
           </div>
           <p className={'text-2xl font-bold tabular-nums ' + getRateColor(data.error_rate)}>
             {data.error_rate}%
           </p>
-          <p className="text-[10px] text-gray-400 mt-1">{data.total_spans.toLocaleString()} 次 Span</p>
+          <p className="text-[11px] text-gray-400 mt-1">{data.total_spans.toLocaleString()} 次 Span</p>
         </div>
         <div className="bento">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">高危类型</span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">高危类型</span>
           </div>
           <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
             {data.by_kind[0] ? kindLabel[data.by_kind[0].kind] || data.by_kind[0].kind : '-'}
           </p>
-          <p className="text-[10px] text-gray-400 mt-1">
+          <p className="text-[11px] text-gray-400 mt-1">
             {data.by_kind[0] ? data.by_kind[0].errors + ' 个错误' : ''}
           </p>
         </div>
@@ -174,7 +174,7 @@ export function ErrorPanel({ endpoint, project = '', onNavigateToTrace }: ErrorP
                 <span className={'text-xs font-mono w-14 text-right tabular-nums ' + getRateColor(k.rate)}>
                   {k.rate}%
                 </span>
-                <span className="text-[10px] text-gray-400 w-16 text-right">{k.errors}/{k.total}</span>
+                <span className="text-[11px] text-gray-400 w-16 text-right">{k.errors}/{k.total}</span>
               </div>
             ))}
           </div>
@@ -198,7 +198,7 @@ export function ErrorPanel({ endpoint, project = '', onNavigateToTrace }: ErrorP
                 <span className={'text-xs font-mono w-14 text-right tabular-nums ' + getRateColor(p.rate)}>
                   {p.rate}%
                 </span>
-                <span className="text-[10px] text-gray-400 w-16 text-right">{p.errors}/{p.total}</span>
+                <span className="text-[11px] text-gray-400 w-16 text-right">{p.errors}/{p.total}</span>
               </div>
             ))}
           </div>
@@ -222,18 +222,18 @@ export function ErrorPanel({ endpoint, project = '', onNavigateToTrace }: ErrorP
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{e.name}</span>
-                    <span className="tag text-[9px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 shrink-0">
+                    <span className="tag text-[11px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 shrink-0">
                       {kindLabel[e.kind] || e.kind}
                     </span>
                   </div>
-                  <p className="text-[10px] text-red-500 mt-0.5 truncate">{e.error}</p>
+                  <p className="text-[11px] text-red-500 mt-0.5 truncate">{e.error}</p>
                   {e.trace_id && (
-                    <p className="text-[9px] text-gray-400 mt-0.5 font-mono truncate flex items-center gap-1">
+                    <p className="text-[11px] text-gray-400 mt-0.5 font-mono truncate flex items-center gap-1">
                       <ExternalLink className="w-2.5 h-2.5" />{e.trace_id.slice(0, 16)}...
                     </p>
                   )}
                 </div>
-                <span className="text-[9px] text-gray-400 shrink-0">{e.start_time?.slice(11, 16)}</span>
+                <span className="text-[11px] text-gray-400 shrink-0">{e.start_time?.slice(11, 16)}</span>
               </div>
             ))}
           </div>

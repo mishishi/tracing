@@ -129,7 +129,7 @@ export function PercentileTrend({ endpoint, project = '' }: PercentileTrendProps
               key={k}
               onClick={() => setActiveKind(k)}
               className={
-                'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' +
+                'px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ' +
                 (activeKind === k
                   ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                   : 'text-gray-400 hover:text-gray-600')

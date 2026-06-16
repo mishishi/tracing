@@ -97,7 +97,7 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
               <button onClick={() => setThreshold(0)} className="text-xs text-gray-400 hover:text-red-500 transition-colors">清除</button>
             )}
           </div>
-          <p className="text-[10px] text-gray-400 mt-2">设为 0 或留空可关闭告警。设置保存在本地浏览器中。</p>
+          <p className="text-[11px] text-gray-400 mt-2">设为 0 或留空可关闭告警。设置保存在本地浏览器中。</p>
         </div>
       )}
 
@@ -107,12 +107,12 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
         <div className="bento mb-4">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">本月配额</h4>
-            <button onClick={() => setShowQuota(!showQuota)} className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors">{showQuota ? '收起' : '设置'}</button>
+            <button onClick={() => setShowQuota(!showQuota)} className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors">{showQuota ? '收起' : '设置'}</button>
           </div>
           {showQuota && (
             <div className="flex items-center gap-2 mb-2">
               <input type="number" min="0" step="1" value={quota || ''} onChange={(e) => { const v = Number(e.target.value); setQuota(v); localStorage.setItem('tracing-quota', String(v)); }} placeholder="月度配额..." className="w-24 px-2 py-1 text-xs rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" />
-              <span className="text-[10px] text-gray-400">元 / 月</span>
+              <span className="text-[11px] text-gray-400">元 / 月</span>
             </div>
           )}
           {quota > 0 && (
@@ -121,8 +121,8 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
                 <div className={'h-full rounded-full transition-all ' + (data.total_cost / quota > 0.9 ? 'bg-red-500' : data.total_cost / quota > 0.7 ? 'bg-amber-500' : 'bg-indigo-500')} style={{ width: Math.min((data.total_cost / quota) * 100, 100) + '%' }} />
               </div>
               <div className="flex justify-between mt-1">
-                <span className="text-[10px] text-gray-400">已用 {fmtCost(data.total_cost)}</span>
-                <span className="text-[10px] text-gray-400">剩余 {fmtCost(Math.max(0, quota - data.total_cost))}</span>
+                <span className="text-[11px] text-gray-400">已用 {fmtCost(data.total_cost)}</span>
+                <span className="text-[11px] text-gray-400">剩余 {fmtCost(Math.max(0, quota - data.total_cost))}</span>
               </div>
             </>
           )}
@@ -133,22 +133,22 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
         <div className="bento">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="w-4 h-4 text-emerald-500" />
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">总成本</span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">总成本</span>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{fmtCost(data.total_cost)}</p>
-          <p className="text-[10px] text-gray-400 mt-1">{data.total_calls} 次调用</p>
+          <p className="text-[11px] text-gray-400 mt-1">{data.total_calls} 次调用</p>
         </div>
         <div className="bento">
           <div className="flex items-center gap-2 mb-2">
             <Layers className="w-4 h-4 text-indigo-500" />
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">项目数</span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">项目数</span>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{projects.length}</p>
         </div>
         <div className="bento">
           <div className="flex items-center gap-2 mb-2">
             <Cpu className="w-4 h-4 text-amber-500" />
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">模型数</span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">模型数</span>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{models.length}</p>
         </div>
@@ -224,9 +224,9 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
             </div>
             <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
               <button onClick={() => setTrendMode('cost')}
-                className={'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' + (trendMode === 'cost' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>费用</button>
+                className={'px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ' + (trendMode === 'cost' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>费用</button>
               <button onClick={() => setTrendMode('tokens')}
-                className={'px-2.5 py-1 text-[10px] font-medium rounded-md transition-all ' + (trendMode === 'tokens' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>Token</button>
+                className={'px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ' + (trendMode === 'tokens' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>Token</button>
             </div>
           </div>
           <div className="flex items-end gap-1 h-32">
@@ -239,7 +239,7 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
                 : 'bg-emerald-400 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400';
               return (
                 <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full group">
-                  <span className="text-[9px] text-gray-400 mb-1 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">{displayVal}</span>
+                  <span className="text-[11px] text-gray-400 mb-1 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">{displayVal}</span>
                   <div className={'w-full rounded-t-sm transition-all min-h-[2px] ' + barColor}
                     style={{ height: Math.max((val / maxVal) * 100, 1) + '%' }} title={d.date + ': ' + displayVal} />
                   <span className="text-[8px] text-gray-400 mt-1 truncate w-full text-center">{d.date.slice(5)}</span>

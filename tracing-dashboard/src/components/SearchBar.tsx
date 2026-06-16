@@ -102,7 +102,7 @@ export function SearchBar({ endpoint, onSelectTrace }: SearchBarProps) {
 
       {open && results.length > 0 && (
         <div className="absolute z-50 mt-1 w-80 sm:w-96 rounded-xl border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-xl max-h-80 overflow-y-auto py-1 animate-fade-in">
-          <div className="px-3 py-1.5 text-[10px] text-gray-400 border-b border-gray-100 dark:border-gray-700">
+          <div className="px-3 py-1.5 text-[11px] text-gray-400 border-b border-gray-100 dark:border-gray-700">
             {results.length} 条结果
           </div>
           {results.map((r) => (
@@ -119,11 +119,11 @@ export function SearchBar({ endpoint, onSelectTrace }: SearchBarProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{r.name || r.id.slice(0, 12)}</span>
-                  <span className="tag text-[9px] bg-gray-100 dark:bg-gray-700 text-gray-500 shrink-0">{kindLabel[r.kind] || r.kind}</span>
-                  {r.project && <span className="tag text-[9px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 shrink-0">{r.project}</span>}
+                  <span className="tag text-[11px] bg-gray-100 dark:bg-gray-700 text-gray-500 shrink-0">{kindLabel[r.kind] || r.kind}</span>
+                  {r.project && <span className="tag text-[11px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 shrink-0">{r.project}</span>}
                 </div>
-                {r.error && <p className="text-[10px] text-red-400 mt-0.5 truncate">{r.error}</p>}
-                <p className="text-[9px] text-gray-400 mt-0.5">{r.start_time?.slice(0, 16)}</p>
+                {r.error && <p className="text-[11px] text-red-400 mt-0.5 truncate">{r.error}</p>}
+                <p className="text-[11px] text-gray-400 mt-0.5">{r.start_time?.slice(0, 16)}</p>
               </div>
             </button>
           ))}

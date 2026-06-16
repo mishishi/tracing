@@ -84,8 +84,8 @@ export function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
               <div className="flex items-center gap-1">
                 {shortcut.keys.map((key, idx) => (
                   <span key={idx} className="flex items-center gap-1">
-                    {idx > 0 && <span className="text-[10px] text-gray-300">+</span>}
-                    <kbd className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                    {idx > 0 && <span className="text-[11px] text-gray-300">+</span>}
+                    <kbd className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                       {key}
                     </kbd>
                   </span>
@@ -96,8 +96,8 @@ export function KeyboardShortcuts({ open, onClose }: KeyboardShortcutsProps) {
         </div>
 
         {/* Footer */}
-        <p className="mt-4 text-[10px] text-gray-400 text-center">
-          按 <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">?</kbd> 随时打开此面板
+        <p className="mt-4 text-[11px] text-gray-400 text-center">
+          按 <kbd className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">?</kbd> 随时打开此面板
         </p>
       </div>
     </div>

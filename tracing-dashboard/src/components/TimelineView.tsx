@@ -49,7 +49,7 @@ export function TimelineView({ spans }: TimelineViewProps) {
           {Array.from({ length: tickCount + 1 }, (_, i) => (
             <div
               key={i}
-              className="text-[9px] text-gray-400 font-mono"
+              className="text-[11px] text-gray-400 font-mono"
               style={{ position: "absolute" as const, left: i === tickCount ? `calc(${LABEL_W}px + ${((i * tickInterval) / totalMs) * 100}% - 32px)` : `${LABEL_W + ((i * tickInterval) / totalMs) * 100}%`, marginLeft: i === 0 ? 0 : -24 }}
             >
               {fmtMs(i * tickInterval)}
@@ -120,7 +120,7 @@ export function TimelineView({ spans }: TimelineViewProps) {
                   }}
                 >
                   {widthPct > 5 && (
-                    <span className="absolute inset-0 flex items-center px-2 text-[9px] text-white font-medium truncate" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>
+                    <span className="absolute inset-0 flex items-center px-2 text-[11px] text-white font-medium truncate" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>
                       {fmtMs(durationMs)}
                     </span>
                   )}

@@ -158,7 +158,7 @@ export function StatCard({ icon, label, value, valueClass }: {
     <div className="stat-card">
       <div className="flex justify-center mb-1.5 text-gray-400">{icon}</div>
       <p className={'text-lg font-bold ' + (valueClass || 'text-gray-900 dark:text-gray-100')}>{value}</p>
-      <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5 font-medium">{label}</p>
+      <p className="text-[11px] text-gray-400 uppercase tracking-wider mt-0.5 font-medium">{label}</p>
     </div>
   );
 }
