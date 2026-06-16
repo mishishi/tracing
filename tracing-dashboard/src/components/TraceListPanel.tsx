@@ -174,7 +174,7 @@ export function TraceListPanel({
             placeholder="搜索 Trace ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-gray-400"
+            className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder-gray-400"
           />
         </div>
         <Dropdown
@@ -285,6 +285,12 @@ export function TraceListPanel({
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[10px] text-gray-400">{t.span_count} spans</span>
+                  {(t as any).avg_rating > 0 && (
+                    <span className="flex items-center gap-0.5">
+                      <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                      <span className="text-[9px] text-amber-500">{(t as any).avg_rating}</span>
+                    </span>
+                  )}
                   {t.project && t.project !== 'default' && (
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                       {t.project}
