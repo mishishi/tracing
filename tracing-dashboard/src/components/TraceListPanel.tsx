@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Search, Bell, RefreshCw, Minimize2, Maximize2, Inbox, Filter, X, GitCompare, Activity, Zap, Star } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { Dropdown } from './Dropdown';
@@ -89,6 +90,7 @@ export function TraceListPanel({
 }: TraceListPanelProps) {
   const projOpts = [...new Set(projects.filter(Boolean).sort())].map((p) => ({ value: p, label: p }));
   const grouped = viewGroupBy === 'summary' ? groupByProject(filteredTraces) : {};
+  const [showFilterPopover, setShowFilterPopover] = useState(false);
 
   const statusOpts = [
     { value: '', label: '全部状态' },
@@ -194,20 +196,78 @@ export function TraceListPanel({
         </div>
       )}
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-1">
-        <Filter className="w-3 h-3 text-gray-400 shrink-0" />
-        <Dropdown options={statusOpts} value={statusFilter} onChange={setStatusFilter} placeholder="状态" className="flex-1" />
-        <Dropdown options={kindOpts} value={kindFilter} onChange={setKindFilter} placeholder="类型" className="flex-1" />
-        <Dropdown options={timeOpts} value={timeRange} onChange={setTimeRange} placeholder="时间" className="flex-1" />
-        {activeFilters > 0 && (
-          <button
-            onClick={() => { setProjectFilter(''); setStatusFilter(''); setKindFilter(''); setTimeRange(''); setSearchQuery(''); }}
-            className="p-1 text-red-400 hover:text-red-600 transition-colors"
-            aria-label="清除筛选"
-          >
-            <X className="w-3 h-3" />
-          </button>
+      {/* Filter popover */}
+      <div className="relative">
+        <button
+          onClick={() => setShowFilterPopover(!showFilterPopover)}
+          className={"w-full flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border transition-colors " +
+            (activeFilters > 0
+              ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
+              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300 dark:hover:border-gray-600")}
+        >
+          <Filter className="w-3 h-3" />
+          <span>筛选{activeFilters > 0 ? " (" + activeFilters + ")" : ""}</span>
+          {activeFilters > 0 && (
+            <span
+              onClick={(e) => { e.stopPropagation(); setProjectFilter(""); setStatusFilter(""); setKindFilter(""); setTimeRange(""); setSearchQuery(""); }}
+              className="ml-auto p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-400 hover:text-red-600 transition-colors cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); setProjectFilter(""); setStatusFilter(""); setKindFilter(""); setTimeRange(""); setSearchQuery(""); } }}
+              aria-label="清除筛选"
+            >
+              <X className="w-3 h-3" />
+            </span>
+          )}
+        </button>
+
+        {showFilterPopover && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowFilterPopover(false)} />
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-3">
+              <div className="space-y-3">
+                <div>
+                  <span className="text-[9px] text-gray-400 uppercase font-semibold mb-1.5 block">状态</span>
+                  <div className="flex flex-wrap gap-1">
+                    {statusOpts.map((o) => (
+                      <button key={o.value}
+                        onClick={() => { setStatusFilter(o.value); setShowFilterPopover(false); }}
+                        className={"px-2.5 py-1 text-[10px] rounded-md transition-colors " +
+                          (statusFilter === o.value ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium" : "bg-gray-50 dark:bg-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600")}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-400 uppercase font-semibold mb-1.5 block">类型</span>
+                  <div className="flex flex-wrap gap-1">
+                    {kindOpts.map((o) => (
+                      <button key={o.value}
+                        onClick={() => { setKindFilter(o.value); setShowFilterPopover(false); }}
+                        className={"px-2.5 py-1 text-[10px] rounded-md transition-colors " +
+                          (kindFilter === o.value ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium" : "bg-gray-50 dark:bg-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600")}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-400 uppercase font-semibold mb-1.5 block">时间</span>
+                  <div className="flex flex-wrap gap-1">
+                    {timeOpts.map((o) => (
+                      <button key={o.value}
+                        onClick={() => { setTimeRange(o.value); setShowFilterPopover(false); }}
+                        className={"px-2.5 py-1 text-[10px] rounded-md transition-colors " +
+                          (timeRange === o.value ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium" : "bg-gray-50 dark:bg-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600")}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

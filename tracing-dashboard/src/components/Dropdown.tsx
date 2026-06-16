@@ -52,7 +52,7 @@ export function Dropdown({
     <div ref={ref} className={'relative ' + className}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border
+        className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-lg border
                    bg-white dark:bg-gray-800
                    border-gray-200 dark:border-gray-700
                    text-gray-900 dark:text-gray-100
@@ -89,7 +89,7 @@ export function Dropdown({
                   setOpen(false);
                 }}
                 className={
-                  'w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ' +
+                  'w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ' +
                   (isSelected
                     ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50')
