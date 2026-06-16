@@ -52,9 +52,9 @@ function fmtTokens(n: number): string {
 }
 
 function fmtCost(n: number): string {
-  if (n >= 1) return '$' + n.toFixed(2);
-  if (n >= 0.01) return '$' + n.toFixed(4);
-  return '$' + n.toFixed(6);
+  if (n >= 1) return '¥' + n.toFixed(2);
+  if (n >= 0.01) return '¥' + n.toFixed(4);
+  return '¥' + n.toFixed(6);
 }
 
 function fmtTime(iso: string): string {

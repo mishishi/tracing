@@ -58,6 +58,8 @@ interface TraceListPanelProps {
   compareTraceA: string | null;
   selectCompareB: (id: string) => void;
   cancelCompare: () => void;
+  mobileView?: string;
+  setMobileView?: (v: 'list' | 'detail') => void;
 }
 
 function groupByProject(traces: TraceSummary[]) {
@@ -87,6 +89,7 @@ export function TraceListPanel({
   sessions, sessionsLoading,
   selected, paginatedTraces, loadTrace,
   compareMode, compareTraceA, selectCompareB, cancelCompare,
+  mobileView, setMobileView,
 }: TraceListPanelProps) {
   const projOpts = [...new Set(projects.filter(Boolean).sort())].map((p) => ({ value: p, label: p }));
   const grouped = viewGroupBy === 'summary' ? groupByProject(filteredTraces) : {};
@@ -115,7 +118,7 @@ export function TraceListPanel({
   const activeFilters = (projectFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (kindFilter ? 1 : 0) + (timeRange ? 1 : 0);
 
   return (
-    <div className={`w-full lg:w-80 shrink-0 flex-col gap-3 min-h-0 ${showList ? 'flex' : 'hidden lg:flex'}`}>
+    <div className={`w-full lg:w-80 shrink-0 flex-col gap-3 min-h-0 ${showList ? (mobileView === 'detail' ? 'hidden lg:flex' : 'flex') : 'hidden lg:flex'}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">

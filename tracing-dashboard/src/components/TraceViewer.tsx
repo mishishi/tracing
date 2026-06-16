@@ -48,6 +48,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
   const [collapseTools, setCollapseTools] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'waterfall' | 'timeline'>('waterfall');
   const [showList, setShowList] = useState(true);
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
   const [viewGroupBy, setViewGroupBy] = useState<'trace' | 'session' | 'summary'>('trace');
   const [sessions, setSessions] = useState<any[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -261,10 +262,19 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
           compareTraceA={compareTraceA}
           selectCompareB={selectCompareB}
           cancelCompare={cancelCompare}
+          mobileView={mobileView}
+          setMobileView={setMobileView}
         />
 
+      {/* Mobile back button */}
+        <button onClick={() => setMobileView('list')}
+          className="lg:hidden flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 mb-2 px-1 py-1.5 min-h-[44px] w-fit">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          返回列表
+        </button>
+
       {/* ── Right panel: detail ── */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+      <div className={"flex-1 flex flex-col min-h-0 min-w-0 lg:flex " + (mobileView === "detail" ? "flex" : "hidden lg:flex")}>
         {!loading && !selected && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Layers className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" />

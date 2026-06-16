@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   BarChart3, Server, RefreshCw, DollarSign,
   Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2,
-  Sun, Moon, AlertTriangle, Minimize2, Maximize2, Share2, FileDown, Layers,
+  Sun, Moon, AlertTriangle, Minimize2, Maximize2, Share2, FileDown, Layers, Menu, XIcon,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -50,6 +50,8 @@ function AppInner() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sharedTraceId, setSharedTraceId] = useState('');
   const [highlightQuery, setHighlightQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [density, setDensity] = useState<'comfortable' | 'compact'>(() => {
     return localStorage.getItem('tracing-dashboard-density') === 'compact' ? 'compact' : 'comfortable';
   });
@@ -183,14 +185,14 @@ function AppInner() {
               }}
             />
 
-            {/* Density toggle */}
+            {/* Density toggle — hidden on mobile */}
             <button onClick={() => setDensity(d => d === 'compact' ? 'comfortable' : 'compact')}
               className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               aria-label={density === 'compact' ? '舒适模式' : '紧凑模式'}>
               {density === 'compact' ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </button>
 
-            {/* Theme */}
+            {/* Theme — hidden on mobile */}
             <button onClick={toggleTheme}
               className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               aria-label="切换主题">
@@ -198,18 +200,50 @@ function AppInner() {
             </button>
           </div>
         </div>
+
+      {/* ===== Mobile menu ===== */}
+      {mobileMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setMobileMenuOpen(false)} />
+          <div className="absolute top-full right-4 mt-1 z-50 sm:hidden w-56 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-3">
+            <div className="space-y-1">
+              <button onClick={() => { toggleTheme(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors min-h-[44px]">
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                切换{theme === 'dark' ? '亮色' : '暗色'}主题
+              </button>
+              <button onClick={() => { const d = density === 'compact' ? 'comfortable' : 'compact'; setDensity(d); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors min-h-[44px]">
+                {density === 'compact' ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+                {density === 'compact' ? '舒适模式' : '紧凑模式'}
+              </button>
+              <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+              <button onClick={() => { setShortcutsOpen(true); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-3 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors min-h-[44px]">
+                <span className="text-[9px] font-mono bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">?</span>
+                键盘快捷键
+              </button>
+              <button onClick={() => { exportToPdf(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-3 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors min-h-[44px]">
+                <FileDown className="w-4 h-4" />
+                导出 PDF
+              </button>
+            </div>
+          </div>
+        </>
+      )}
       </header>
 
       {/* ===== Main ===== */}
       <main id="dashboard-main" className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit max-w-full overflow-x-auto">
+        <div className="flex items-center gap-1 mb-4 sm:mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-full sm:w-fit overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ' +
+                'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-all min-h-[44px] sm:min-h-0 ' +
                 (activeTab === tab.key
                   ? 'bg-white dark:bg-gray-700 shadow-sm ' + tab.color
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300')
