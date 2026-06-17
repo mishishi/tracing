@@ -474,7 +474,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                   {/* Backdrop */}
                   <div className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40 transition-opacity" onClick={() => setSelectedSpanId(null)} />
                   {/* Drawer */}
-                  <div className="fixed top-0 right-0 h-full w-[480px] max-w-[90vw] z-50 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right">
+                  <div className="fixed top-0 right-0 h-full w-[480px] max-w-[90vw] z-50 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl flex flex-col animate-slide-in-right">
                     <SpanDetailPanel
                       span={span}
                       onClose={() => setSelectedSpanId(null)}
