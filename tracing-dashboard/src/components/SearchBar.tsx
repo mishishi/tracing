@@ -39,10 +39,10 @@ export function SearchBar({ endpoint, onSelectTrace }: SearchBarProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Global Ctrl+K shortcut
+  // Global Ctrl+/ shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
         e.preventDefault();
         inputRef.current?.focus();
       }

@@ -103,7 +103,7 @@ export function ComparisonView({ endpoint }: ComparisonViewProps) {
       <div className="bento">
         <div className="flex items-center gap-2 mb-3">
           <Layers className="w-4 h-4 text-indigo-500" />
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">选择对比项目</h4>
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">对比项目</h4>
           <span className="text-[11px] text-gray-400">（至少选 2 个）</span>
         </div>
         <MultiSelect

@@ -293,7 +293,10 @@ function AppInner() {
       {/* ===== Footer ===== */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-[11px] text-gray-400">
-          <span>追踪面板 v0.2.0</span>
+          <span className="flex items-center gap-3">
+            <span>追踪面板 v0.2.0</span>
+            <a href="https://github.com/mishishi/tracing/blob/master/tracing-dashboard/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">更新日志</a>
+          </span>
           <span className="font-mono text-[11px] hidden sm:inline">{endpoint}</span>
         </div>
       </footer>
