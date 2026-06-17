@@ -9,6 +9,7 @@ interface JsonBlockProps {
   maxHeight?: number;
   defaultExpanded?: boolean;
   searchable?: boolean;
+  defaultViewMode?: 'raw' | 'json' | 'md';
 }
 
 function tryParseJson(text: string): { ok: boolean; value: any } {
@@ -82,10 +83,10 @@ function JsonObject({ value, depth }: { value: Record<string, any>; depth: numbe
   );
 }
 
-export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = false, searchable = false }: JsonBlockProps) {
+export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = false, searchable = false, defaultViewMode = 'raw' }: JsonBlockProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'raw' | 'json' | 'md'>('raw');
+  const [viewMode, setViewMode] = useState<'raw' | 'json' | 'md'>(defaultViewMode);
   const { success } = useToast();
 
   const copy = useCallback(() => {
