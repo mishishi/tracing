@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.1 (2026-06)
+
+### UX
+- Session group view: bento card layout with duration, project badges, time range
+- Ctrl+/ global search shortcut
+- Footer changelog link
+
 ## v0.2.0 (2026-06)
 
 ### UX
