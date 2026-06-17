@@ -121,7 +121,7 @@ function WaterfallRow({
             'absolute top-1/2 -translate-y-1/2 h-4 sm:h-5 rounded-sm opacity-80 group-hover:opacity-100 transition-opacity flex items-center px-1 min-w-[4px] ' +
             (span.status === 'error' ? '!bg-red-400' : (kindColor[span.kind] || 'bg-gray-400'))
           }
-          style={{ left: leftPct + '%', width: Math.max(widthPct, 0.4) + '%' }}
+          style={{ left: leftPct + '%', width: Math.min(Math.max(widthPct, 0.4), 100 - leftPct) + '%' }}
         >
           {widthPct > 8 && (
             <span className="text-[8px] sm:text-[11px] text-white font-medium truncate leading-none mix-blend-difference">
