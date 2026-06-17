@@ -251,8 +251,10 @@ def _patch_crewai():
             msgs = getattr(event, "messages", None)
             if isinstance(msgs, list) and msgs:
                 span.metadata["prompt_preview"] = str(msgs[-1])[:500]
+                span.metadata["prompt"] = str(msgs[-1])[:32000]
             elif isinstance(msgs, str):
                 span.metadata["prompt_preview"] = msgs[:500]
+                span.metadata["prompt"] = msgs[:32000]
             _get_local().llm_stack.append(span)
         except Exception as e:
             _log("LLM_STARTED err: " + str(e))
@@ -281,6 +283,7 @@ def _patch_crewai():
             if resp is not None:
                 resp_str = str(resp)
                 span.metadata["response_preview"] = resp_str[:500]
+                span.metadata["response"] = resp_str[:32000]
                 tool_m = re.search(r'(?:write_file|read_file)\s*\(\s*["\u201c]([^")\u201d]+)', resp_str)
                 if tool_m:
                     action = "写文件" if "write_file" in tool_m.group(0) else "读文件"
@@ -342,6 +345,7 @@ def _patch_crewai():
             args = getattr(event, "tool_args", "")
             if args:
                 span.metadata["tool_input"] = str(args)[:500]
+                span.metadata["tool_input_full"] = str(args)[:32000]
             span.start()
             _get_local().tool_stack.append(span)
         except Exception as e:
@@ -367,6 +371,7 @@ def _patch_crewai():
             result = getattr(event, "result", None) or getattr(event, "output", None)
             if result:
                 span.metadata["tool_output"] = str(result)[:500]
+                span.metadata["tool_output_full"] = str(result)[:32000]
             span.finish(SpanStatus.OK)
             send(span)
             _log("TOOL_END sent duration=" + str(round(span.duration_ms)) + "ms")

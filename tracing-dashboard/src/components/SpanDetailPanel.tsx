@@ -222,28 +222,28 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                 </div>
               )}
               {metadata.tool_input && (
-                <JsonBlock label="输入" content={metadata.tool_input} maxHeight={expandAllIO ? 99999 : 300} defaultExpanded={expandAllIO} />
+                <JsonBlock label="输入" content={metadata.tool_input_full || metadata.tool_input} maxHeight={expandAllIO ? 99999 : 300} defaultExpanded={expandAllIO} />
               )}
               {metadata.tool_output && (
-                <JsonBlock label="输出" content={metadata.tool_output} maxHeight={expandAllIO ? 99999 : 300} defaultExpanded={expandAllIO} />
+                <JsonBlock label="输出" content={metadata.tool_output_full || metadata.tool_output} maxHeight={expandAllIO ? 99999 : 300} defaultExpanded={expandAllIO} />
               )}
             </div>
           </section>
         )}
 
         {/* Prompt (LLM only) */}
-        {isLLM && metadata.prompt_preview && (
+        {isLLM && (metadata.prompt || metadata.prompt_preview) && (
           <section>
             <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
-            <JsonBlock label="" content={metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} />
+            <JsonBlock label="" content={metadata.prompt || metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} />
           </section>
         )}
 
         {/* Response (LLM only) */}
-        {isLLM && metadata.response_preview && (
+        {isLLM && (metadata.response || metadata.response_preview) && (
           <section>
             <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输出 Response</h4>
-            <JsonBlock label="" content={metadata.response_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} />
+            <JsonBlock label="" content={metadata.response || metadata.response_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} />
           </section>
         )}
 

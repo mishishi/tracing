@@ -26,6 +26,8 @@ def _patch_openai():
             metadata={
                 "model": kwargs.get("model", "unknown"),
                 "messages_count": len(kwargs.get("messages", [])),
+                "prompt_preview": str(kwargs.get("messages", []))[:500],
+                "prompt": str(kwargs.get("messages", []))[:32000],
             },
         )
         span.start()
@@ -37,6 +39,9 @@ def _patch_openai():
                 span.metadata["input_tokens"] = usage.prompt_tokens or 0
                 span.metadata["output_tokens"] = usage.completion_tokens or 0
                 span.metadata["total_tokens"] = usage.total_tokens or 0
+            content = getattr(result.choices[0].message, "content", "") if result.choices else ""
+            span.metadata["response_preview"] = str(content)[:500]
+            span.metadata["response"] = str(content)[:32000]
             span.finish(SpanStatus.OK)
             send(span)
             return result

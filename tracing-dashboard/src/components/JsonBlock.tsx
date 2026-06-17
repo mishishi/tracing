@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useToast } from './ToastProvider';
-import { ChevronDown, ChevronUp, Copy, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Search, Code2, Braces } from 'lucide-react';
 
 interface JsonBlockProps {
   label: string;
@@ -10,9 +10,81 @@ interface JsonBlockProps {
   searchable?: boolean;
 }
 
+function tryParseJson(text: string): { ok: boolean; value: any } {
+  try {
+    const v = JSON.parse(text);
+    return { ok: true, value: v };
+  } catch {
+    return { ok: false, value: null };
+  }
+}
+
+function JsonNode({ value, depth = 0 }: { value: any; depth?: number }) {
+  if (value === null || value === undefined) return <span className="text-gray-400 italic">null</span>;
+  if (typeof value === 'boolean') return <span className="text-amber-500">{value ? 'true' : 'false'}</span>;
+  if (typeof value === 'number') return <span className="text-emerald-500">{value}</span>;
+  if (typeof value === 'string') {
+    const display = value.length > 200 ? JSON.stringify(value.slice(0, 200)) + '...' : JSON.stringify(value);
+    return <span className="text-indigo-400">{display}</span>;
+  }
+  if (Array.isArray(value)) return <JsonArray value={value} depth={depth} />;
+  if (typeof value === 'object') return <JsonObject value={value} depth={depth} />;
+  return <span>{String(value)}</span>;
+}
+
+function JsonArray({ value, depth }: { value: any[]; depth: number }) {
+  const [collapsed, setCollapsed] = useState(depth > 2);
+  const pad = '\u00A0\u00A0'.repeat(depth);
+  if (collapsed) {
+    return (
+      <span className="text-gray-400 cursor-pointer hover:text-gray-600" onClick={() => setCollapsed(false)}>
+        [{value.length} items]...
+      </span>
+    );
+  }
+  return (
+    <span>
+      {'[\n'}
+      {value.map((item, idx) => (
+        <span key={idx}>
+          {pad}  <JsonNode value={item} depth={depth + 1} />
+          {idx < value.length - 1 ? ',' : ''}{'\n'}
+        </span>
+      ))}
+      {pad}{']'}
+    </span>
+  );
+}
+
+function JsonObject({ value, depth }: { value: Record<string, any>; depth: number }) {
+  const [collapsed, setCollapsed] = useState(depth > 2);
+  const keys = Object.keys(value);
+  const pad = '\u00A0\u00A0'.repeat(depth);
+  if (collapsed) {
+    return (
+      <span className="text-gray-400 cursor-pointer hover:text-gray-600" onClick={() => setCollapsed(false)}>
+        {'{'}{keys.length} keys{'}'}...
+      </span>
+    );
+  }
+  return (
+    <span>
+      {'{\n'}
+      {keys.map((key, idx) => (
+        <span key={key}>
+          {pad}  <span className="text-violet-400">"{key}"</span>: <JsonNode value={value[key]} depth={depth + 1} />
+          {idx < keys.length - 1 ? ',' : ''}{'\n'}
+        </span>
+      ))}
+      {pad}{'}'}
+    </span>
+  );
+}
+
 export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = false, searchable = false }: JsonBlockProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'raw' | 'json'>('raw');
   const { success } = useToast();
 
   const copy = useCallback(() => {
@@ -26,11 +98,20 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
     : content;
 
   const needsExpand = content.length > 300;
+  const lineCount = content.split('\n').length;
+
+  const parsed = useMemo(() => tryParseJson(content), [content]);
+  const isJson = parsed.ok;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[11px] text-gray-400">{label}</span>
+        <span className="text-[11px] text-gray-400">
+          {label && <span>{label}</span>}
+          <span className="text-[10px] text-gray-400 ml-1">
+            ({lineCount} 行, {(content.length / 1024).toFixed(1)} KB)
+          </span>
+        </span>
         <div className="flex items-center gap-1">
           {searchable && (
             <div className="relative">
@@ -44,37 +125,41 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               />
             </div>
           )}
-          <button
-            onClick={copy}
-            className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
-            aria-label="复制"
-          >
+          {isJson && (
+            <button
+              onClick={() => setViewMode(viewMode === 'raw' ? 'json' : 'raw')}
+              className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+              aria-label={viewMode === 'raw' ? 'JSON 结构化' : '原始文本'}
+              title={viewMode === 'raw' ? 'JSON 结构化视图' : '原始文本'}
+            >
+              {viewMode === 'raw' ? <Braces className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
+            </button>
+          )}
+          <button onClick={copy} className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors" aria-label="复制">
             <Copy className="w-3 h-3" />
           </button>
           {needsExpand && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
-              aria-label={expanded ? '收起' : '展开'}
-            >
+            <button onClick={() => setExpanded(!expanded)} className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors" aria-label={expanded ? '收起' : '展开'}>
               {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
           )}
         </div>
       </div>
-      <pre
-        className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-auto whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
-        style={{ maxHeight: expanded ? 'none' : maxHeight }}
-        onClick={needsExpand && !expanded ? () => setExpanded(true) : undefined}
-      >
-        {displayContent || '(空)'}
-      </pre>
+      {isJson && viewMode === 'json' ? (
+        <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-auto font-mono text-gray-300 transition-all"
+          style={{ maxHeight: expanded ? 'none' : maxHeight }}>
+          <JsonNode value={parsed.value} />
+        </pre>
+      ) : (
+        <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-auto whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
+          style={{ maxHeight: expanded ? 'none' : maxHeight }}
+          onClick={needsExpand && !expanded ? () => setExpanded(true) : undefined}>
+          {displayContent || '(空)'}
+        </pre>
+      )}
       {needsExpand && !expanded && (
-        <button
-          onClick={() => setExpanded(true)}
-          className="w-full text-[11px] text-gray-400 hover:text-indigo-500 py-1 transition-colors"
-        >
-          点击展开完整内容...
+        <button onClick={() => setExpanded(true)} className="w-full text-[11px] text-gray-400 hover:text-indigo-500 py-1 transition-colors">
+          点击展开完整内容 ({lineCount} 行)...
         </button>
       )}
     </div>
