@@ -120,7 +120,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         </button>
       )}
 
-      <div className="flex-1 py-3 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto py-3 space-y-4">
         {/* Basic Info */}
         <section>
           <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">基本信息</h4>
