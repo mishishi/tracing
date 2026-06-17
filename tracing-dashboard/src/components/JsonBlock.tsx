@@ -168,17 +168,17 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
         </div>
       </div>
       {viewMode === 'md' ? (
-        <div className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden transition-all markdown-body"
+        <div className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-x-auto overflow-y-hidden transition-all markdown-body"
           style={{ maxHeight: expanded ? 'none' : maxHeight }}
           dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
         />
       ) : isJson && viewMode === 'json' ? (
-        <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden font-mono text-gray-300 transition-all"
+        <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-x-auto overflow-y-hidden font-mono text-gray-300 transition-all"
           style={{ maxHeight: expanded ? 'none' : maxHeight }}>
           <JsonNode value={parsed.value} />
         </pre>
       ) : (
-        <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
+        <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-y-hidden whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
           style={{ maxHeight: expanded ? 'none' : maxHeight }}
           onClick={needsExpand && !expanded ? () => setExpanded(true) : undefined}>
           {displayContent || '(空)'}
