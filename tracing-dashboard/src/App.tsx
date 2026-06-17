@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   BarChart3, Server, RefreshCw, DollarSign,
   Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2,
-  Sun, Moon, AlertTriangle, Minimize2, Maximize2, Share2, FileDown, Layers, Menu, XIcon,
+  Sun, Moon, AlertTriangle, Minimize2, Maximize2, Share2, FileDown, Layers, Menu, XIcon, Keyboard,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';

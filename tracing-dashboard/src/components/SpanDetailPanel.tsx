@@ -1,4 +1,4 @@
-import { X, Copy, Zap, Wrench, Cpu, Clock, Layers, Tag, MessageSquare, Star, Edit3, Save } from 'lucide-react';
+import { X, Copy, Zap, Wrench, Cpu, Clock, Layers, Tag, MessageSquare, Star, Edit3, Save, Maximize2, Minimize2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Span } from '../utils/trace-utils';
 import { JsonBlock } from './JsonBlock';
@@ -108,6 +108,18 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
       </div>
 
       {/* Content */}
+      
+      {/* Expand all I/O toggle */}
+      {(isLLM || isTool) && (
+        <button
+          onClick={() => setExpandAllIO(!expandAllIO)}
+          className="flex items-center gap-1.5 text-[11px] text-indigo-500 hover:text-indigo-600 transition-colors pb-2 shrink-0"
+        >
+          {expandAllIO ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          {expandAllIO ? '折叠全部 I/O' : '展开全部 I/O'}
+        </button>
+      )}
+
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
         {/* Basic Info */}
         <section>
@@ -210,10 +222,10 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
                 </div>
               )}
               {metadata.tool_input && (
-                <JsonBlock label="输入" content={metadata.tool_input} maxHeight={300} defaultExpanded={expandAllIO} />
+                <JsonBlock label="输入" content={metadata.tool_input} maxHeight={expandAllIO ? 99999 : 300} defaultExpanded={expandAllIO} />
               )}
               {metadata.tool_output && (
-                <JsonBlock label="输出" content={metadata.tool_output} maxHeight={300} defaultExpanded={expandAllIO} />
+                <JsonBlock label="输出" content={metadata.tool_output} maxHeight={expandAllIO ? 99999 : 300} defaultExpanded={expandAllIO} />
               )}
             </div>
           </section>
@@ -223,7 +235,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {isLLM && metadata.prompt_preview && (
           <section>
             <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
-            <JsonBlock label="" content={metadata.prompt_preview} maxHeight={400} defaultExpanded={expandAllIO} />
+            <JsonBlock label="" content={metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} />
           </section>
         )}
 
@@ -231,7 +243,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {isLLM && metadata.response_preview && (
           <section>
             <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输出 Response</h4>
-            <JsonBlock label="" content={metadata.response_preview} maxHeight={400} defaultExpanded={expandAllIO} />
+            <JsonBlock label="" content={metadata.response_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} />
           </section>
         )}
 

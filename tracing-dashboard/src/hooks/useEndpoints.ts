@@ -16,7 +16,7 @@ function loadEndpoints(): EndpointConfig[] {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch { /* ignore */ }
-  return [{ id: 'default', name: '本地服务', url: 'http://localhost:9200' }];
+  const defaultUrl = import.meta.env.VITE_TRACING_BASE || 'http://localhost:9200'; return [{ id: 'default', name: '本地服务', url: defaultUrl }];
 }
 
 function saveEndpoints(endpoints: EndpointConfig[]) {
