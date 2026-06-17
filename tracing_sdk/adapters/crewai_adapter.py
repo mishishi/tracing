@@ -250,8 +250,15 @@ def _patch_crewai():
             span.start()
             msgs = getattr(event, "messages", None)
             if isinstance(msgs, list) and msgs:
-                span.metadata["prompt_preview"] = str(msgs[-1])[:500]
-                span.metadata["prompt"] = str(msgs[-1])[:32000]
+                last = msgs[-1]
+                if isinstance(last, dict):
+                    content = last.get("content", "") or str(last)
+                    role = last.get("role", "user")
+                    span.metadata["prompt_role"] = role
+                else:
+                    content = str(last)
+                span.metadata["prompt_preview"] = content[:500]
+                span.metadata["prompt"] = content[:32000]
             elif isinstance(msgs, str):
                 span.metadata["prompt_preview"] = msgs[:500]
                 span.metadata["prompt"] = msgs[:32000]
@@ -281,9 +288,9 @@ def _patch_crewai():
             span.metadata["total_tokens"] = usage.get("total_tokens", 0)
             resp = getattr(event, "response", None)
             if resp is not None:
-                resp_str = str(resp)
-                span.metadata["response_preview"] = resp_str[:500]
-                span.metadata["response"] = resp_str[:32000]
+                resp_str = getattr(resp, "content", None) or getattr(resp, "raw", None) or str(resp)
+                span.metadata["response_preview"] = str(resp_str)[:500]
+                span.metadata["response"] = str(resp_str)[:32000]
                 tool_m = re.search(r'(?:write_file|read_file)\s*\(\s*["\u201c]([^")\u201d]+)', resp_str)
                 if tool_m:
                     action = "写文件" if "write_file" in tool_m.group(0) else "读文件"
