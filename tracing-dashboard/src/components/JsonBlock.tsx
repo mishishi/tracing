@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from './ToastProvider';
-import { ChevronDown, ChevronUp, Copy, Search, Code2, Braces } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Search, Code2, Braces, FileText } from 'lucide-react';
+import { renderMarkdown } from '../utils/markdown';
 
 interface JsonBlockProps {
   label: string;
@@ -84,7 +85,7 @@ function JsonObject({ value, depth }: { value: Record<string, any>; depth: numbe
 export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = false, searchable = false }: JsonBlockProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'raw' | 'json'>('raw');
+  const [viewMode, setViewMode] = useState<'raw' | 'json' | 'md'>('raw');
   const { success } = useToast();
 
   const copy = useCallback(() => {
@@ -102,6 +103,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
 
   const parsed = useMemo(() => tryParseJson(content), [content]);
   const isJson = parsed.ok;
+  const looksLikeMd = !isJson && (/^#{1,4}\s/m.test(content) || /\*\*/.test(content) || /^[-*]\s/m.test(content) || /^\|.*\|/m.test(content));
 
   return (
     <div>
@@ -135,6 +137,16 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               {viewMode === 'raw' ? <Braces className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
             </button>
           )}
+          {looksLikeMd && (
+            <button
+              onClick={() => setViewMode(viewMode === 'raw' ? 'md' : 'raw')}
+              className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+              aria-label={viewMode === 'raw' ? 'Markdown 渲染' : '原始文本'}
+              title={viewMode === 'raw' ? 'Markdown 渲染' : '原始文本'}
+            >
+              {viewMode === 'raw' ? <FileText className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
+            </button>
+          )}
           <button onClick={copy} className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors" aria-label="复制">
             <Copy className="w-3 h-3" />
           </button>
@@ -145,7 +157,12 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
           )}
         </div>
       </div>
-      {isJson && viewMode === 'json' ? (
+      {viewMode === 'md' ? (
+        <div className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-auto transition-all markdown-body"
+          style={{ maxHeight: expanded ? 'none' : maxHeight }}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+        />
+      ) : isJson && viewMode === 'json' ? (
         <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-auto font-mono text-gray-300 transition-all"
           style={{ maxHeight: expanded ? 'none' : maxHeight }}>
           <JsonNode value={parsed.value} />
