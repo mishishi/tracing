@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, RefreshCw, Minimize2, Maximize2, Inbox, Filter, X, GitCompare, Activity, Zap, Star } from 'lucide-react';
+import { Search, Bell, RefreshCw, Minimize2, Maximize2, Inbox, Filter, X, GitCompare, Activity, Zap, Star, Clock, ChevronRight } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { Dropdown } from './Dropdown';
 import { SkeletonTraceList } from './Skeleton';
@@ -369,35 +369,65 @@ export function TraceListPanel({
 
       {/* Session view */}
       {viewGroupBy === 'session' && (
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-1.5">
           {sessionsLoading ? <SkeletonTraceList /> : sessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Inbox className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
               <p className="text-sm text-gray-400">暂无会话数据</p>
             </div>
           ) : (
-            sessions.map((s: SessionSummary) => (
-              <div
-                key={s.session_id}
-                onClick={() => {
-                  setViewGroupBy('trace');
-                  setSearchQuery(s.session_id);
-                }}
-                className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-              >
-                <div>
-                  <span className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate block max-w-[200px]">{s.session_id}</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] text-gray-400">{s.trace_count} traces</span>
-                    <span className="text-[11px] text-gray-400">{s.span_count} spans</span>
-                    {s.error_count > 0 && (
-                      <span className="text-[11px] text-red-500">{s.error_count} errors</span>
-                    )}
+            sessions.map((s: SessionSummary) => {
+              const durationSec = s.total_duration_ms ? Math.round(s.total_duration_ms / 1000) : 0;
+              const durationStr = durationSec >= 3600 ? Math.round(durationSec / 3600) + 'h ' + Math.round((durationSec % 3600) / 60) + 'm' :
+                durationSec >= 60 ? Math.round(durationSec / 60) + 'm ' + (durationSec % 60) + 's' : durationSec + 's';
+              const badgeColor = s.error_count > 0 ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400';
+              return (
+                <div
+                  key={s.session_id}
+                  onClick={() => {
+                    setViewGroupBy('trace');
+                    setSearchQuery(s.session_id);
+                  }}
+                  className="bento p-3 hover:border-indigo-300 dark:hover:border-indigo-700 cursor-pointer transition-all group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-mono font-medium text-gray-700 dark:text-gray-200 truncate">
+                          {s.session_id.length > 36 ? s.session_id.slice(0, 36) + '...' : s.session_id}
+                        </span>
+                        {s.project && (
+                          <span className="tag bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shrink-0">{s.project}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-gray-400 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                          {s.trace_count} 个 Trace
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          {s.span_count} 个 Span
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {durationStr}
+                        </span>
+                        <span className={badgeColor + ' text-[10px] px-1.5 py-px rounded-full font-medium'}>
+                          {s.error_count > 0 ? s.error_count + ' 错误' : '正常'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400">
+                        <span>{fmtTime(s.first_time)}</span>
+                        <span>→</span>
+                        <span>{fmtTime(s.last_time)}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-indigo-400 shrink-0 mt-1" />
                   </div>
                 </div>
-                <span className="text-[11px] text-gray-400 shrink-0">{fmtTime(s.first_time)}</span>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
