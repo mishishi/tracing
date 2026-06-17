@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useToast } from './ToastProvider';
-import { ChevronDown, ChevronUp, Copy, Search, Code2, Braces, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Search } from 'lucide-react';
 import { renderMarkdown } from '../utils/markdown';
 
 interface JsonBlockProps {
@@ -128,25 +128,34 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               />
             </div>
           )}
-          {isJson && (
-            <button
-              onClick={() => setViewMode(viewMode === 'raw' ? 'json' : 'raw')}
-              className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
-              aria-label={viewMode === 'raw' ? 'JSON 结构化' : '原始文本'}
-              title={viewMode === 'raw' ? 'JSON 结构化视图' : '原始文本'}
-            >
-              {viewMode === 'raw' ? <Braces className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
-            </button>
-          )}
-          {looksLikeMd && (
-            <button
-              onClick={() => setViewMode(viewMode === 'raw' ? 'md' : 'raw')}
-              className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
-              aria-label={viewMode === 'raw' ? 'Markdown 渲染' : '原始文本'}
-              title={viewMode === 'raw' ? 'Markdown 渲染' : '原始文本'}
-            >
-              {viewMode === 'raw' ? <FileText className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
-            </button>
+          {(isJson || looksLikeMd) && (
+            <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-md">
+              <button
+                onClick={() => setViewMode('raw')}
+                className={'px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ' +
+                  (viewMode === 'raw' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+              >
+                原始
+              </button>
+              {isJson && (
+                <button
+                  onClick={() => setViewMode('json')}
+                  className={'px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ' +
+                    (viewMode === 'json' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+                >
+                  JSON
+                </button>
+              )}
+              {looksLikeMd && (
+                <button
+                  onClick={() => setViewMode('md')}
+                  className={'px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ' +
+                    (viewMode === 'md' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+                >
+                  预览
+                </button>
+              )}
+            </div>
           )}
           <button onClick={copy} className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors" aria-label="复制">
             <Copy className="w-3 h-3" />
