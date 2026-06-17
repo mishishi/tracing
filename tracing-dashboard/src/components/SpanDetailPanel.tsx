@@ -350,12 +350,10 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
 
         {/* Raw JSON */}
         <section>
-          <details>
-            <summary className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 mb-2">
-              <Layers className="w-3 h-3 inline mr-1" />原始 JSON
-            </summary>
-            <JsonBlock label="" content={JSON.stringify(span, null, 2)} maxHeight={300} searchable />
-          </details>
+          <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            <Layers className="w-3 h-3 inline mr-1" />原始 JSON
+          </h4>
+          <JsonBlock label="" content={JSON.stringify(span, null, 2)} maxHeight={expandAllIO ? 99999 : 300} searchable defaultExpanded={expandAllIO} />
         </section>
       </div>
     </div>
