@@ -310,7 +310,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
           </div>
         )}
         {!loading && selected && (
-          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-0">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
               <div className="min-w-0 flex-1">
                 {/* Breadcrumb */}
