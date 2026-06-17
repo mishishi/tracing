@@ -60,6 +60,14 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
   const [toolMenuOpen, setToolMenuOpen] = useState(false);
   const [spanSearchQuery, setSpanSearchQuery] = useState('');
 
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (selectedSpanId) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [selectedSpanId]);
+
   const toggle = (id: string) => setExpanded((p) => {
     const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
