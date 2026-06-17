@@ -105,7 +105,7 @@ function WaterfallRow({
       </div>
 
       {/* Bar area */}
-      <div className="flex-1 relative py-1.5 pr-3">
+      <div className="flex-1 relative py-1.5 pr-8">
         {/* Grid lines */}
         {[25, 50, 75].map((pct) => (
           <div
@@ -228,7 +228,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
         <div className="w-[100px] sm:w-[160px] lg:w-[220px] shrink-0 py-1 px-1 sm:px-2">
           <span className="text-[11px] text-gray-400 uppercase font-semibold">Span</span>
         </div>
-        <div className="flex-1 relative py-1 pr-3">
+        <div className="flex-1 relative py-1 pr-8">
           {[0, 25, 50, 75, 100].map((pct) => (
             <div key={pct} className="absolute top-0" style={{ left: pct + '%' }}>
               <span className="text-[11px] text-gray-400 font-mono -translate-x-1/2 block">
