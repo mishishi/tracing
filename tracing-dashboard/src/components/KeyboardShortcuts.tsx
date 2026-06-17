@@ -15,7 +15,7 @@ const shortcuts: Shortcut[] = [
   { keys: ['R'], label: '刷新当前数据' },
   { keys: ['D'], label: '切换紧凑/舒适密度' },
   { keys: ['Esc'], label: '关闭面板/弹窗' },
-  { keys: ['Ctrl', 'K'], label: '聚焦搜索框' },
+  { keys: ['Ctrl', 'K'], label: '打开命令面板' },
 ];
 
 interface KeyboardShortcutsProps {

@@ -1,0 +1,133 @@
+{
+  "slug": "tracing-dashboard",
+  "timestamp": "2026-06-17T00-09-31-238Z",
+  "target": "tracing-dashboard — full app",
+  "heuristics": {
+    "visibility_of_system_status": {
+      "score": 4,
+      "note": "Health indicator, SSE badge, loading skeletons, toast notifications all present"
+    },
+    "match_between_system_and_real_world": {
+      "score": 4,
+      "note": "Spans, traces, tokens — matches AI developer mental model exactly"
+    },
+    "user_control_and_freedom": {
+      "score": 3,
+      "note": "Close buttons on all panels, cancel compare mode, but no undo for bulk operations"
+    },
+    "consistency_and_standards": {
+      "score": 4,
+      "note": "Bento cards, consistent icon family (Lucide), same button/tag/tab patterns across tabs"
+    },
+    "error_prevention": {
+      "score": 3,
+      "note": "API key confirmation for delete, but no confirm on trace export overwrite"
+    },
+    "recognition_rather_than_recall": {
+      "score": 4,
+      "note": "Visual icons + labels for tabs, kind colors, waterfall bars are self-evident"
+    },
+    "flexibility_and_efficiency_of_use": {
+      "score": 3,
+      "note": "Keyboard shortcuts (1-4, ?, r, d, Escape), density toggle, but no cmd+k palette"
+    },
+    "aesthetic_and_minimalist_design": {
+      "score": 3,
+      "note": "Clean bento layout, but toolbar in trace detail is crowded with 8+ icon buttons"
+    },
+    "help_users_recognize_diagnose_recover": {
+      "score": 4,
+      "note": "Error banner with retry, empty states with SDK guide, error panel with clickable links"
+    },
+    "help_and_documentation": {
+      "score": 3,
+      "note": "Keyboard shortcut modal (?), SDK quick-start in empty state, but no inline tooltips"
+    }
+  },
+  "ai_slop_verdict": "PASS — does not look AI-generated",
+  "ai_slop_notes": "Bento cards, Inter font, and Lucide icons are common in AI UIs but the information architecture and feature depth feel intentional and product-driven, not templated",
+  "cognitive_load": {
+    "choice_overload": "5 tabs is well within limits. Toolbar has 8 icon buttons which is at the upper boundary",
+    "visual_noise": "Trace detail header packs 8+ data points (spans, tokens, cost, breadcrumb) — borderline",
+    "memory_burden": "URL persistence means no need to remember filter state. Password/API key not stored in plain sight"
+  },
+  "personas": {
+    "alex_power_user": {
+      "strengths": [
+        "Keyboard shortcuts work well",
+        "Density toggle for compact mode",
+        "URL state persistence for sharing"
+      ],
+      "issues": [
+        "No cmd+k command palette for power users",
+        "Cannot bulk-select traces",
+        "No custom keyboard shortcut remapping"
+      ]
+    },
+    "sam_accessibility": {
+      "strengths": [
+        "ARIA labels on all icon buttons",
+        "Focus-visible ring now added",
+        "Screen reader can navigate tab structure"
+      ],
+      "issues": [
+        "Color alone used for span kind identification (small dot)",
+        "No skip-to-content link",
+        "No reduced-motion support in animation JS (CSS only)"
+      ]
+    }
+  },
+  "strengths": [
+    "Feature depth — waterfall, timeline, list views, cost analytics, error tracking, comparison all in one tool",
+    "Empty state design — guides new users to SDK integration instead of blank pages",
+    "URL state persistence — filters and tabs survive refresh, enabling shareable views",
+    "Real-time updates via SSE with visual connection indicator",
+    "Dark mode with zero-flash implementation"
+  ],
+  "priority_issues": [
+    {
+      "severity": "P1",
+      "issue": "Toolbar icon overload",
+      "detail": "Trace detail toolbar has 8+ icon buttons (compare, share, export JSON, export CSV, copy ID, close). Power users will memorize but new users face a wall of indistinguishable icons",
+      "suggestion": "Group secondary actions into a '...' overflow menu, keep only 3-4 primary actions visible"
+    },
+    {
+      "severity": "P1",
+      "issue": "Span kind color reliance",
+      "detail": "The small colored dot (w-1.5 h-1.5) is the only kind indicator in the list view. Color-blind users cannot distinguish flow/agent/llm/tool",
+      "suggestion": "Add a small text label or icon alongside the color dot"
+    },
+    {
+      "severity": "P2",
+      "issue": "Inconsistent detail panel placement",
+      "detail": "Waterfall view shows span detail below the chart. List view shows it below the list (after virtual scroll refactor). Timeline has no inline detail. Three different patterns for the same action",
+      "suggestion": "Standardize: always show span detail in a right-side slide-out drawer"
+    },
+    {
+      "severity": "P2",
+      "issue": "No cmd+k / command palette",
+      "detail": "Power users (Alex) benefit most from quick navigation. Current keyboard shortcuts (1-4 for tabs) are good but not discoverable",
+      "suggestion": "Add cmd+k palette: 'go to costs', 'search trace #...', 'toggle dark mode'"
+    },
+    {
+      "severity": "P2",
+      "issue": "gray-on-color readability",
+      "detail": "Detector found 4 instances of gray text on colored backgrounds (indigo-100, red-50). The gray looks washed out",
+      "suggestion": "Use a darker variant of the background hue for text, e.g. text-indigo-700 on bg-indigo-100"
+    }
+  ],
+  "minor_observations": [
+    "Footer shows version but no changelog link",
+    "SearchBar has global trace search but no keyboard shortcut like cmd+/",
+    "ComparisonView '选择对比项目' label is long — could be just '对比项目'",
+    "Inter font flagged as overused — consider a more distinctive typeface for the next design iteration"
+  ],
+  "provocative_questions": [
+    "What if tracing-dashboard had a 'narrative mode' that tells the story of a trace execution in plain language?",
+    "Should the dashboard remember the last-viewed trace and restore it on page load (like a code editor remembers open files)?",
+    "Could the waterfall view get a 'diff mode' that compares two runs of the same flow side-by-side?"
+  ],
+  "total_score": 35,
+  "max_score": 40,
+  "score_pct": 87.5
+}

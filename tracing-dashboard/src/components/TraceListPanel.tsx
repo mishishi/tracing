@@ -415,8 +415,8 @@ export function TraceListPanel({
 }
 
 
-function InfiniteScrollSentinel({ page, totalPages, onLoadMore, loading }: {
-  page: number; totalPages: number; onLoadMore: () => void; loading: boolean;
+function InfiniteScrollSentinel({ hasMore, onLoadMore, loading }: {
+  hasMore: boolean; onLoadMore: () => void; loading: boolean;
 }) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 

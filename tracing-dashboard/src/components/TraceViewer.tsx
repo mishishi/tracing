@@ -4,7 +4,7 @@ import {
   AlertCircle, Clock,
   BarChart3, Search, Server, Filter, X, Inbox,
   Minimize2, Maximize2, RefreshCw, Copy, Download, Share2,
-  List, GanttChartSquare, Bell, FileDown, GitCompare,
+  List, GanttChartSquare, Bell, FileDown, GitCompare, MoreHorizontal,
 } from 'lucide-react';
 import { Dropdown } from './Dropdown';
 import { TraceListPanel } from './TraceListPanel';
@@ -57,6 +57,8 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
   const [compareTraceA, setCompareTraceA] = useState<string | null>(null);
   const [compareData, setCompareData] = useState<any>(null);
   const [compareLoading, setCompareLoading] = useState(false);
+  const [toolMenuOpen, setToolMenuOpen] = useState(false);
+  const [spanSearchQuery, setSpanSearchQuery] = useState('');
 
   const toggle = (id: string) => setExpanded((p) => {
     const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n;
@@ -371,7 +373,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                     </button>
                   ))}
                 </div>
-                <button onClick={toggleAll} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label={allExpanded ? '折叠全部' : '展开全部'}>
+                <button onClick={toggleAll} className="p-1.5 text-gray-400 hover:text-gray-600 min-w-[36px] min-h-[36px] flex items-center justify-center dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label={allExpanded ? '折叠全部' : '展开全部'}>
                   {allExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
                 {!compareMode && selected && (
@@ -380,19 +382,35 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                   </button>
                 )}
 
-                <button onClick={shareTrace} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="分享">
-                  <Share2 className="w-4 h-4" />
-                </button>
-                <button onClick={exportTrace} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="导出 JSON">
-                  <Download className="w-4 h-4" />
-                </button>
-                <button onClick={exportCSV} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="导出 CSV">
-                  <FileDown className="w-4 h-4" />
-                </button>
-                <button onClick={() => copyTraceId(selected.trace_id)} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="复制 Trace ID">
-                  <Copy className="w-4 h-4" />
-                </button>
-                <button onClick={closeDetail} className="p-1.5 text-gray-400 hover:text-gray min-w-[36px] min-h-[36px] flex items-center justify-center-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="关闭">
+                <div className="relative">
+                  <button onClick={() => setToolMenuOpen(!toolMenuOpen)} className="p-1.5 text-gray-400 hover:text-gray-600 min-w-[36px] min-h-[36px] flex items-center justify-center dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="更多操作">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                  {toolMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setToolMenuOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                        <button onClick={() => { shareTrace(); setToolMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors">
+                          <Share2 className="w-3.5 h-3.5" />
+                          分享
+                        </button>
+                        <button onClick={() => { exportTrace(); setToolMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors">
+                          <Download className="w-3.5 h-3.5" />
+                          导出 JSON
+                        </button>
+                        <button onClick={() => { exportCSV(); setToolMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors">
+                          <FileDown className="w-3.5 h-3.5" />
+                          导出 CSV
+                        </button>
+                        <button onClick={() => { copyTraceId(selected.trace_id); setToolMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors">
+                          <Copy className="w-3.5 h-3.5" />
+                          复制 Trace ID
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <button onClick={closeDetail} className="p-1.5 text-gray-400 hover:text-gray-600 min-w-[36px] min-h-[36px] flex items-center justify-center dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" aria-label="关闭">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -406,18 +424,6 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
             {viewMode === 'waterfall' && (
               <>
                 <WaterfallView trace={filteredTrace || selected} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} highlightQuery={highlightQuery} hideTools={collapseTools} />
-                {selectedSpanId && (() => {
-                  const span = (filteredSpans.length ? filteredSpans : selected.spans).find((s: any) => s.id === selectedSpanId);
-                  if (!span) return null;
-                  return (
-                    <div className="mt-4">
-                      <SpanDetailPanel
-                        span={span}
-                        onClose={() => setSelectedSpanId(null)}
-                      />
-                    </div>
-                  );
-                })()}
               </>
             )}
             {viewMode === 'list' && (
@@ -438,25 +444,37 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate flex-1">{s.name || kindLabel[s.kind]}</span>
                         <span className="text-[11px] text-gray-400">{fmtMs(s.duration_ms)}</span>
                         {statusIcon(s.status)}
-                        <span className={kindColor[s.kind] + ' w-1.5 h-1.5 rounded-full'} />
+                        <span className={kindColor[s.kind] + ' w-1.5 h-1.5 rounded-full shrink-0'} />
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 w-8 text-right shrink-0">{kindLabel[s.kind] || s.kind}</span>
                       </button>
                     )}
                     className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
                   />
                 </div>
-                {selectedSpanId && (() => {
-                  const span = (filteredSpans.length ? filteredSpans : selected!.spans).find((s: any) => s.id === selectedSpanId);
-                  if (!span) return null;
-                  return (
-                    <div className="mt-4">
-                      <SpanDetailPanel span={span} onClose={() => setSelectedSpanId(null)} />
-                    </div>
-                  );
-                })()}
+
               </>
             )}
           </>
         )}
+
+            {/* Unified span detail drawer */}
+            {selectedSpanId && (() => {
+              const span = (filteredSpans.length ? filteredSpans : selected?.spans)?.find((s: any) => s.id === selectedSpanId);
+              if (!span) return null;
+              return (
+                <>
+                  {/* Backdrop */}
+                  <div className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40 transition-opacity" onClick={() => setSelectedSpanId(null)} />
+                  {/* Drawer */}
+                  <div className="fixed top-0 right-0 h-full w-[480px] max-w-[90vw] z-50 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl overflow-y-auto animate-slide-in-right">
+                    <SpanDetailPanel
+                      span={span}
+                      onClose={() => setSelectedSpanId(null)}
+                    />
+                  </div>
+                </>
+              );
+            })()}
 
             {compareData && (
               <div className="mt-4">

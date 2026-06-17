@@ -98,6 +98,7 @@ function WaterfallRow({
           )}
         </div>
         <span className="text-gray-400 shrink-0">{kindIcons[span.kind] || kindIcons.phase}</span>
+        <span className="text-[9px] px-1.5 py-px rounded font-medium shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{kindLabel[span.kind] || span.kind}</span>
         <span className="text-[11px] sm:text-[11px] text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">
           {span.name || kindLabel[span.kind] || span.kind}
         </span>

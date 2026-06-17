@@ -17,6 +17,7 @@ import { ComparisonView } from './components/ComparisonView';
 import { Overview } from './components/Overview';
 import { SearchBar } from './components/SearchBar';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
+import { CommandPalette } from './components/CommandPalette';
 import { exportToPdf } from './utils/exportPdf';
 
 type Tab = 'overview' | 'traces' | 'costs' | 'errors' | 'compare';
@@ -48,6 +49,7 @@ function AppInner() {
   }, [activeTab]);
   const [globalProject, setGlobalProject] = useState('');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [sharedTraceId, setSharedTraceId] = useState('');
   const [highlightQuery, setHighlightQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -82,7 +84,8 @@ function AppInner() {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === '?') { e.preventDefault(); setShortcutsOpen((prev) => !prev); return; }
-      if (e.key === 'Escape') { setShortcutsOpen(false); setSettingsOpen(false); return; }
+      if (e.key === 'Escape') { setShortcutsOpen(false); setSettingsOpen(false); setPaletteOpen(false); return; }
+      if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) { e.preventDefault(); setPaletteOpen((p) => !p); return; }
       const tabMap: Record<string, Tab> = { '1': 'traces', '2': 'costs', '3': 'errors', '4': 'compare' };
       if (tabMap[e.key]) { setActiveTab(tabMap[e.key]); return; }
       if (e.key === 'r' || e.key === 'R') { setTick((t) => t + 1); return; }
@@ -271,6 +274,21 @@ function AppInner() {
       </main>
 
       <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={[
+          { id: 'tab-traces', label: '追踪列表', description: '查看所有 Trace', icon: <BarChart3 className="w-4 h-4" />, action: () => setActiveTab('traces') },
+          { id: 'tab-costs', label: '成本分析', description: 'Token 费用概览', icon: <DollarSign className="w-4 h-4" />, action: () => setActiveTab('costs') },
+          { id: 'tab-errors', label: '错误面板', description: '查看错误日志', icon: <AlertTriangle className="w-4 h-4" />, action: () => setActiveTab('errors') },
+          { id: 'tab-compare', label: '项目对比', description: '多项目指标对比', icon: <Layers className="w-4 h-4" />, action: () => setActiveTab('compare') },
+          { id: 'tab-overview', label: '总览', description: '仪表盘首页', icon: <Layers className="w-4 h-4" />, action: () => setActiveTab('overview') },
+          { id: 'toggle-theme', label: theme === 'dark' ? '切换亮色模式' : '切换暗色模式', icon: theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, action: toggleTheme },
+          { id: 'toggle-density', label: density === 'compact' ? '舒适密度' : '紧凑密度', icon: density === 'compact' ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />, action: () => setDensity((d) => d === 'compact' ? 'comfortable' : 'compact') },
+          { id: 'refresh', label: '刷新数据', icon: <RefreshCw className="w-4 h-4" />, action: () => setTick((t) => t + 1) },
+          { id: 'shortcuts', label: '键盘快捷键', description: '查看所有快捷键', icon: <Keyboard className="w-4 h-4" />, action: () => setShortcutsOpen(true) },
+        ]}
+      />
 
       {/* ===== Footer ===== */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-3 px-4">
