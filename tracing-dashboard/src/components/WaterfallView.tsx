@@ -19,10 +19,10 @@ const kindBorder: Record<string, string> = {
 
 function fmtMs(ms: number): string {
   if (ms < 1000) return Math.round(ms) + 'ms';
-  if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+  if (ms < 60000) return Math.round(ms / 1000) + 's';
   const m = Math.floor(ms / 60000);
-  const s = ((ms % 60000) / 1000).toFixed(0);
-  return m + 'm ' + s + 's';
+  const s = Math.round((ms % 60000) / 1000);
+  return s > 0 ? m + 'm' + s + 's' : m + 'm';
 }
 
 function statusIcon(status: string) {
@@ -105,7 +105,7 @@ function WaterfallRow({
       </div>
 
       {/* Bar area */}
-      <div className="flex-1 relative py-1.5 pr-8">
+      <div className="flex-1 relative py-1.5 pr-12">
         {/* Grid lines */}
         {[25, 50, 75].map((pct) => (
           <div
@@ -228,10 +228,10 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
         <div className="w-[100px] sm:w-[160px] lg:w-[220px] shrink-0 py-1 px-1 sm:px-2">
           <span className="text-[11px] text-gray-400 uppercase font-semibold">Span</span>
         </div>
-        <div className="flex-1 relative py-1 pr-8">
+        <div className="flex-1 relative py-1 pr-12">
           {[0, 25, 50, 75, 100].map((pct) => (
             <div key={pct} className="absolute top-0" style={{ left: pct + '%' }}>
-              <span className="text-[11px] text-gray-400 font-mono -translate-x-1/2 block">
+              <span className="text-[11px] text-gray-400 font-mono -translate-x-1/2 block whitespace-nowrap">
                 {fmtMs(visibleStart + visibleDuration * pct / 100)}
               </span>
             </div>
