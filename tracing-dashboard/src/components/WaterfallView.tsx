@@ -222,7 +222,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
 
 
   return (
-    <div className="overflow-x-auto">
+    <div className="flex flex-col flex-1 min-h-0 overflow-x-auto">
       {/* Time axis */}
       <div className="flex items-stretch border-b border-gray-100 dark:border-gray-800 mb-1">
         <div className="w-[100px] sm:w-[160px] lg:w-[220px] shrink-0 py-1 px-1 sm:px-2">
@@ -313,7 +313,7 @@ export const WaterfallView = memo(function WaterfallViewInner({ trace, selectedS
       </div>
 
       {/* Span rows */}
-      <div ref={waterfallRef} className="max-h-[500px] overflow-y-auto">
+      <div ref={waterfallRef} className="flex-1 min-h-0 overflow-y-auto">
         {filteredFlat.map((node) => (
           <WaterfallRow
             key={node.span.id}

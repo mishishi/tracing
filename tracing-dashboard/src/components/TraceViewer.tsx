@@ -310,8 +310,8 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
           </div>
         )}
         {!loading && selected && (
-          <>
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
               <div className="min-w-0 flex-1">
                 {/* Breadcrumb */}
                 <nav className="flex items-center gap-1 mb-1">
@@ -430,9 +430,9 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
               </div>
             )}
             {viewMode === 'waterfall' && (
-              <>
+              <div className="flex flex-col flex-1 min-h-0">
                 <WaterfallView trace={filteredTrace || selected} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} highlightQuery={highlightQuery} hideTools={collapseTools} />
-              </>
+              </div>
             )}
             {viewMode === 'list' && (
               <>
@@ -462,7 +462,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
 
               </>
             )}
-          </>
+          </div>
         )}
 
             {/* Unified span detail drawer */}
