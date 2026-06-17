@@ -82,7 +82,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
   const isTool = span.kind === 'tool_call';
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full px-4">
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
