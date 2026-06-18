@@ -58,6 +58,7 @@
 - ✅ SSE 实时推送
 - ✅ Fetch 错误处理（重试 + 错误横幅）
 - ✅ API Key 认证
+- ✅ Docker Compose 一键部署
 
 ## 扩展功能
 
@@ -68,11 +69,7 @@
 
 ## 未来考虑
 
+- MessageView 接入 SpanDetailPanel（代码已有，未接上）
 - Session 搜索/过滤增强
-- Agent 对比视图
-- 自定义仪表板布局
 - 告警规则（错误率/延迟阈值）
 - Prometheus metrics 导出
-- Docker Compose 一键部署
-- Playwright E2E 测试
-- 国际化（i18n）
