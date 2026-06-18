@@ -53,10 +53,13 @@ async def percentiles(
 @router.get("/token-heatmap")
 async def token_heatmap(
     project: str = Query(default=""),
-    days: int = Query(default=30, ge=1, le=365),
+    days: int = Query(default=0, ge=0, le=366),
+    year: int = Query(default=0, ge=2024, le=2100),
 ):
-    """Token consumption heatmap: daily token counts by kind."""
-    return get_token_heatmap(project=project, days=days)
+    """Token consumption heatmap: daily token counts.
+    If year is set, returns Jan 1 to Dec 31 (or today if current year).
+    If days is set, returns last N days."""
+    return get_token_heatmap(project=project, days=days, year=year)
 
 
 @router.get("/call-trend")

@@ -542,11 +542,31 @@ def get_latency_heatmap(project: str = "", days: int = 7) -> dict:
         }
 
 
-def get_token_heatmap(project: str = "", days: int = 30) -> dict:
-    """Aggregate daily token consumption by kind for calendar heatmap."""
+def get_token_heatmap(project: str = "", days: int = 0, year: int = 0) -> dict:
+    """Aggregate daily token consumption by kind for calendar heatmap.
+    If year is set, returns Jan 1 to Dec 31 (or today if current year).
+    If days > 0, returns last N days (overrides year)."""
     import sqlite3
-    from collections import defaultdict
     from datetime import date, timedelta
+
+    today = date.today()
+
+    # Determine date range
+    if days > 0:
+        day_list = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+    elif year > 0:
+        start = date(year, 1, 1)
+        end = today if year == today.year else date(year, 12, 31)
+        delta = (end - start).days + 1
+        day_list = [(start + timedelta(days=i)).isoformat() for i in range(delta)]
+    else:
+        # Default: current year to date
+        start = date(today.year, 1, 1)
+        delta = (today - start).days + 1
+        day_list = [(start + timedelta(days=i)).isoformat() for i in range(delta)]
+
+    day_index = {d: i for i, d in enumerate(day_list)}
+    ndays = len(day_list)
 
     with _conn() as db:
         db.row_factory = sqlite3.Row
@@ -556,9 +576,9 @@ def get_token_heatmap(project: str = "", days: int = 30) -> dict:
         if project:
             where += " AND project = ?"
             params.append(project)
-        if days > 0:
-            where += " AND start_time >= datetime('now', ?)"
-            params.append(f'-{days} days')
+        where += " AND DATE(start_time, 'localtime') >= ? AND DATE(start_time, 'localtime') <= ?"
+        params.append(day_list[0])
+        params.append(day_list[-1])
 
         rows = db.execute(
             f"SELECT kind, DATE(start_time, 'localtime') as day, "
@@ -569,11 +589,6 @@ def get_token_heatmap(project: str = "", days: int = 30) -> dict:
             f"GROUP BY kind, day ORDER BY kind, day",
             params
         ).fetchall()
-
-        # Build per-day data
-        today = date.today()
-        day_list = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
-        day_index = {d: i for i, d in enumerate(day_list)}
 
         kinds: list[str] = []
         kind_idx: dict[str, int] = {}
@@ -588,8 +603,8 @@ def get_token_heatmap(project: str = "", days: int = 30) -> dict:
             if k not in kind_idx:
                 kind_idx[k] = len(kinds)
                 kinds.append(k)
-                matrix.append([0] * days)
-                counts.append([0] * days)
+                matrix.append([0] * ndays)
+                counts.append([0] * ndays)
             di = day_index[d]
             ki = kind_idx[k]
             total_tokens = (row["input_tokens"] or 0) + (row["output_tokens"] or 0)

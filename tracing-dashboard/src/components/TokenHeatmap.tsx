@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Coins, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { SkeletonHeatmap } from './Skeleton';
 import { Dropdown } from './Dropdown';
 
@@ -10,13 +10,8 @@ interface HeatmapData {
   counts: number[][];
 }
 
-const kindLabel: Record<string, string> = {
-  llm_call: 'LLM',
-  tool_call: '工具',
-  agent: '智能体',
-};
-
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
+const WEEKDAY_LABELS = ['一', '', '三', '', '五', '', '日'];
+const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
 interface TokenHeatmapProps {
   endpoint: string;
@@ -29,16 +24,24 @@ function fmtTokens(n: number): string {
   return String(n);
 }
 
+function fmtDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+}
+
 export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
   const [data, setData] = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tooltip, setTooltip] = useState<{ date: string; tokens: number; calls: number; x: number; y: number } | null>(null);
-  const [days, setDays] = useState(30);
+  const [tooltip, setTooltip] = useState<{
+    date: string; tokens: number; calls: number; x: number; y: number;
+  } | null>(null);
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
 
   const fetchData = () => {
     const params = new URLSearchParams();
     if (project) params.set('project', project);
-    params.set('days', String(days));
+    params.set('year', String(year));
     fetch(endpoint + '/token-heatmap?' + params.toString())
       .then((r) => r.json())
       .then(setData)
@@ -51,31 +54,17 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
     fetchData();
     const interval = setInterval(fetchData, 120_000);
     return () => clearInterval(interval);
-  }, [endpoint, project, days]);
+  }, [endpoint, project, year]);
 
   if (loading) return <SkeletonHeatmap />;
 
   if (!data || !data.days || data.days.length === 0) {
     return (
       <div className="bento text-center py-10">
-        <Coins className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+        <Zap className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
         <p className="text-sm text-gray-400">暂无 Token 消耗数据</p>
       </div>
     );
-  }
-
-  // Build calendar grid: group days into weeks
-  const firstDate = new Date(data.days[0] + 'T00:00:00');
-  const startDayOfWeek = firstDate.getDay();
-  const offset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
-
-  const paddedDays: (string | null)[] = [];
-  for (let i = 0; i < offset; i++) paddedDays.push(null);
-  for (const d of data.days) paddedDays.push(d);
-
-  const weeks: (string | null)[][] = [];
-  for (let i = 0; i < paddedDays.length; i += 7) {
-    weeks.push(paddedDays.slice(i, i + 7));
   }
 
   // Build token lookup across all kinds
@@ -92,77 +81,96 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
   }
 
   const maxTokens = Math.max(...Object.values(tokenMap), 1);
+  const totalTokens = Object.values(tokenMap).reduce((a, b) => a + b, 0);
   const isDark = document.documentElement.classList.contains('dark');
 
-  const getColor = (tokens: number) => {
-    if (tokens === 0) return 'transparent';
-    const ratio = Math.min(tokens / maxTokens, 1);
-    if (isDark) {
-      if (ratio < 0.25) return 'rgba(99, 102, 241, 0.2)';
-      if (ratio < 0.5) return 'rgba(99, 102, 241, 0.4)';
-      if (ratio < 0.75) return 'rgba(99, 102, 241, 0.65)';
-      return 'rgba(129, 140, 248, 0.9)';
-    } else {
-      if (ratio < 0.25) return '#e0e7ff';
-      if (ratio < 0.5) return '#c7d2fe';
-      if (ratio < 0.75) return '#a5b4fc';
-      return '#818cf8';
-    }
-  };
+  // Build calendar grid
+  const firstDate = new Date(data.days[0] + 'T00:00:00');
+  const firstDayOfWeek = firstDate.getDay(); // 0=Sun
+  const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Mon=0
 
-  // Month labels for column headers
-  const monthLabels: { label: string; col: number }[] = [];
+  // Pad to start on Monday
+  const paddedDays: (string | null)[] = [];
+  for (let i = 0; i < startOffset; i++) paddedDays.push(null);
+  for (const d of data.days) paddedDays.push(d);
+
+  // Group into weeks (rows)
+  const COL_COUNT = 7;
+  const weeks: (string | null)[][] = [];
+  for (let i = 0; i < paddedDays.length; i += COL_COUNT) {
+    weeks.push(paddedDays.slice(i, i + COL_COUNT));
+  }
+
+  // Build month label positions: which week column each month starts at
+  const monthLabels: { name: string; week: number }[] = [];
   weeks.forEach((week, wi) => {
     for (const day of week) {
       if (day) {
         const d = new Date(day + 'T00:00:00');
-        const monthStr = (d.getMonth() + 1) + '月';
+        const m = d.getMonth();
+        const label = MONTH_NAMES[m];
         const last = monthLabels[monthLabels.length - 1];
-        if (!last || last.label !== monthStr) {
-          monthLabels.push({ label: monthStr, col: wi });
+        if (!last || last.name !== label) {
+          monthLabels.push({ name: label, week: wi });
         }
-        break;
+        break; // only check first valid day of the week
       }
     }
   });
 
-  const totalTokens = Object.values(tokenMap).reduce((a, b) => a + b, 0);
+  // Color levels (4 levels + empty, like GitHub)
+  const getLevel = (tokens: number): number => {
+    if (tokens === 0) return -1;
+    if (maxTokens <= 1) return 3;
+    const ratio = tokens / maxTokens;
+    if (ratio < 0.25) return 0;
+    if (ratio < 0.5) return 1;
+    if (ratio < 0.75) return 2;
+    return 3;
+  };
+
+  const levelColors: Record<number, string> = isDark
+    ? { '-1': 'transparent', '0': 'rgba(99,102,241,0.15)', '1': 'rgba(99,102,241,0.3)', '2': 'rgba(99,102,241,0.55)', '3': 'rgba(129,140,248,0.8)' }
+    : { '-1': 'transparent', '0': '#ebedf0', '1': '#c7d2fe', '2': '#818cf8', '3': '#4f46e5' };
+
+  // Available years (from first data year to current)
+  const firstDataYear = new Date(data.days[0] + 'T00:00:00').getFullYear();
+  const yearOptions = [];
+  for (let y = currentYear; y >= firstDataYear; y--) {
+    yearOptions.push({ value: String(y), label: String(y) + '年' });
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-indigo-500" />
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Token 消耗热力图</h3>
-          <span className="text-[11px] text-gray-400">过去 {days} 天</span>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Token 消耗
+          </h3>
         </div>
         <Dropdown
-          value={String(days)}
-          options={[
-            { value: '14', label: '最近 14 天' },
-            { value: '30', label: '最近 30 天' },
-            { value: '90', label: '最近 90 天' },
-            { value: '180', label: '最近 180 天' },
-          ]}
-          onChange={(v) => setDays(Number(v))}
-          className="w-32"
+          value={String(year)}
+          options={yearOptions}
+          onChange={(v) => setYear(Number(v))}
+          className="w-24"
         />
       </div>
 
       <div className="bento overflow-x-auto py-3">
-        <div className="min-w-[500px]">
-          {/* Month header row */}
-          <div className="flex mb-2" style={{ paddingLeft: 28 }}>
+        <div className="min-w-[680px]">
+          {/* Month labels */}
+          <div className="flex mb-1" style={{ paddingLeft: 28 }}>
             {monthLabels.map((m, i) => {
-              const prevCol = i > 0 ? monthLabels[i - 1].col : 0;
-              const width = m.col - prevCol;
+              const nextCol = i + 1 < monthLabels.length ? monthLabels[i + 1].week : weeks.length;
+              const span = nextCol - m.week;
               return (
                 <div
                   key={i}
                   className="text-[11px] text-gray-400"
-                  style={{ flex: width }}
+                  style={{ flex: span, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 >
-                  {m.label}
+                  {m.name}
                 </div>
               );
             })}
@@ -170,40 +178,55 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
 
           <div className="flex">
             {/* Weekday labels */}
-            <div className="flex flex-col gap-1 mr-2" style={{ width: 24 }}>
-              {WEEKDAYS.map((d) => (
-                <div key={d} className="h-5 flex items-center text-[10px] text-gray-400 justify-end pr-1">
-                  {d}
+            <div className="flex flex-col shrink-0" style={{ width: 28, gap: 3 }}>
+              {WEEKDAY_LABELS.map((label, i) => (
+                <div
+                  key={i}
+                  className="text-[10px] text-gray-400 flex items-center justify-end pr-1.5"
+                  style={{ height: 14, lineHeight: '14px' }}
+                >
+                  {label}
                 </div>
               ))}
             </div>
 
-            {/* Calendar grid */}
-            <div className="flex gap-1 flex-1">
+            {/* Grid */}
+            <div className="flex flex-1" style={{ gap: 3 }}>
               {weeks.map((week, wi) => (
-                <div key={wi} className="flex flex-col gap-1 flex-1">
+                <div key={wi} className="flex flex-col flex-1" style={{ gap: 3 }}>
                   {week.map((day, di) => {
                     if (!day) {
-                      return <div key={di} className="flex-1 h-5 rounded-sm" />;
+                      return (
+                        <div
+                          key={di}
+                          style={{ height: 14, borderRadius: 2 }}
+                        />
+                      );
                     }
                     const tokens = tokenMap[day] || 0;
                     const calls = callMap[day] || 0;
+                    const level = getLevel(tokens);
                     return (
                       <div
                         key={di}
-                        className="flex-1 h-5 rounded-sm cursor-default transition-opacity hover:opacity-80"
+                        className="cursor-pointer transition-all hover:ring-2 hover:ring-indigo-400/50"
                         style={{
-                          backgroundColor: getColor(tokens),
-                          border: tokens === 0 ? '1px solid var(--border)' : 'none',
+                          height: 14,
+                          width: '100%',
+                          minWidth: 12,
+                          borderRadius: 2,
+                          backgroundColor: levelColors[String(level)],
+                          outline: tokens === 0 ? '1px solid rgba(128,128,128,0.15)' : 'none',
                         }}
                         onMouseEnter={(e) =>
                           setTooltip({ date: day, tokens, calls, x: e.clientX, y: e.clientY })
                         }
                         onMouseMove={(e) =>
-                          setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)
+                          setTooltip((prev) =>
+                            prev ? { ...prev, x: e.clientX, y: e.clientY } : null
+                          )
                         }
                         onMouseLeave={() => setTooltip(null)}
-                        title={tokens > 0 ? day.slice(5) + ' - ' + fmtTokens(tokens) + ' tokens, ' + calls + ' calls' : ''}
                       />
                     );
                   })}
@@ -213,17 +236,23 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
           </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800" style={{ paddingLeft: 28 }}>
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800" style={{ paddingLeft: 28 }}>
             <span className="text-[11px] text-gray-400">少</span>
-            <div className="flex h-3 rounded-full overflow-hidden" style={{ width: 100 }}>
-              <div className="flex-1" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : '#e0e7ff' }} />
-              <div className="flex-1" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.4)' : '#c7d2fe' }} />
-              <div className="flex-1" style={{ backgroundColor: isDark ? 'rgba(99,102,241,0.65)' : '#a5b4fc' }} />
-              <div className="flex-1" style={{ backgroundColor: isDark ? 'rgba(129,140,248,0.9)' : '#818cf8' }} />
-            </div>
+            {[-1, 0, 1, 2, 3].map((level) => (
+              <div
+                key={level}
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 2,
+                  backgroundColor: levelColors[String(level)],
+                  outline: level === -1 ? '1px solid rgba(128,128,128,0.15)' : 'none',
+                }}
+              />
+            ))}
             <span className="text-[11px] text-gray-400">多</span>
             <span className="text-[11px] text-gray-400 ml-auto">
-              总计: {fmtTokens(totalTokens)}
+              总计 {fmtTokens(totalTokens)} tokens
             </span>
           </div>
         </div>
@@ -237,15 +266,15 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             left: Math.min(tooltip.x + 12, window.innerWidth - 200),
-            top: tooltip.y - 70,
+            top: tooltip.y - 80,
           }}
         >
           <div className="font-medium text-gray-700 dark:text-gray-300 mb-0.5">
-            {tooltip.date}
+            {fmtDate(tooltip.date)}
           </div>
           <div className="flex gap-3 text-gray-500">
             <span>{fmtTokens(tooltip.tokens)} tokens</span>
-            <span>{tooltip.calls} 次调用</span>
+            {tooltip.calls > 0 && <span>{tooltip.calls} 次调用</span>}
           </div>
         </div>
       )}
