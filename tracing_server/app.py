@@ -16,16 +16,14 @@ logger = __import__("logging").getLogger("tracing.server")
 
 RETENTION_DAYS = int(os.environ.get("TRACING_RETENTION_DAYS", "30"))
 
-app = FastAPI(title="Tracing Server", version="0.3.0")
-
 # ── Unicode-friendly JSON ─────────────────────
-# Override JSONResponse to preserve Chinese characters (avoid \uXXXX escapes)
+from fastapi.responses import JSONResponse
 
-from fastapi.responses import JSONResponse as _JSONResponse
-_original_render = _JSONResponse.render
-def _render_unicode(self, content):
-    return json.dumps(content, ensure_ascii=False, default=str).encode("utf-8")
-_JSONResponse.render = _render_unicode
+class UnicodeJSONResponse(JSONResponse):
+    def render(self, content) -> bytes:
+        return json.dumps(content, ensure_ascii=False, default=str).encode("utf-8")
+
+app = FastAPI(title="Tracing Server", version="0.3.0", default_response_class=UnicodeJSONResponse)
 
 # ── CORS ──────────────────────────────────────
 
