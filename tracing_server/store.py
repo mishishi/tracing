@@ -1083,7 +1083,7 @@ def get_session_traces(session_id: str) -> list[str]:
     """Get all trace_ids for a session."""
     with _conn() as db:
         rows = db.execute(
-            "SELECT DISTINCT trace_id FROM spans WHERE session_id = ? ORDER BY MIN(start_time)",
+            "SELECT DISTINCT trace_id FROM spans WHERE session_id = ? ORDER BY start_time",
             (session_id,)
         ).fetchall()
         return [r[0] for r in rows]
@@ -1437,8 +1437,14 @@ def get_wasteful_traces(project: str = "", days: int = 30, limit: int = 20) -> d
                 "reasons": reasons,
                 "start_time": r["start_time"],
             })
-    traces.sort(key=lambda x: -x["waste_score"])
-    return {"traces": traces[:limit], "total_wasteful": len(traces)}
+    # Deduplicate by trace_id: keep the span with highest waste_score per trace
+    best: dict[str, dict] = {}
+    for t in traces:
+        tid = t["trace_id"]
+        if tid not in best or t["waste_score"] > best[tid]["waste_score"]:
+            best[tid] = t
+    unique = sorted(best.values(), key=lambda x: -x["waste_score"])
+    return {"traces": unique[:limit], "total_wasteful": len(unique)}
 
 
 # ── Agent flow analysis ───────────────────────

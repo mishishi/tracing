@@ -132,9 +132,16 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <div className="bento">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-4 h-4 text-emerald-500" />
-            <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">总成本</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-500" />
+              <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">总成本</span>
+            </div>
+            <button onClick={() => setShowThreshold(!showThreshold)}
+              className={'p-1.5 rounded-lg transition-all ' + (showThreshold ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700')}
+              aria-label="成本阈值设置" title="成本阈值设置">
+              {showThreshold ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+            </button>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{fmtCost(data.total_cost)}</p>
           <p className="text-[11px] text-gray-400 mt-1">{data.total_calls} 次调用</p>
@@ -155,12 +162,7 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
         </div>
       </div>
 
-      {/* Threshold Settings Button */}
-      <button onClick={() => setShowThreshold(!showThreshold)}
-        className={'p-2 text-sm rounded-lg transition-all ' + (showThreshold ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
-        aria-label="成本阈值设置" title="成本阈值设置">
-        <Bell className="w-4 h-4" />
-      </button>
+
 
       {/* Per-Model Breakdown */}
       {models.length > 0 && (
