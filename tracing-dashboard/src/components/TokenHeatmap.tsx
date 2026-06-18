@@ -137,8 +137,8 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
     yearOptions.push({ value: String(y), label: String(y) + '年' });
   }
 
-  const CELL = 12;
-  const GAP = 2;
+  const CELL = 14;
+  const GAP = 3;
   const ROW_HEIGHT = CELL + GAP;
 
   return (
@@ -158,7 +158,7 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
         />
       </div>
 
-      <div className="bento py-3 px-2 flex flex-col" style={{ height: 290 }}>
+      <div className="bento py-3 px-2 flex flex-col" style={{ minHeight: 255 }}>
         <div className="flex-1 overflow-x-auto">
           {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: 28 }}>
