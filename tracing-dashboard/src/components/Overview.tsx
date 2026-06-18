@@ -80,10 +80,12 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
+        fetch(endpoint + '/percentiles').then(r => r.json()).then(d => { const p99s = [d.llm_call?.p99, d.tool_call?.p99, d.agent?.p99].filter(Boolean); if (p99s.length) setP99Latency(Math.max(...p99s)); }).catch(() => {});
+    
+Promise.all([
       fetch(endpoint + '/stats').then(r => r.json()),
       fetch(endpoint + '/costs?days=30').then(r => r.json()),
-      fetch(endpoint + '/percentiles').then(r => r.json()).then(d => { const p99s = [d.llm_call?.p99, d.tool_call?.p99, d.agent?.p99].filter(Boolean); if (p99s.length) setP99Latency(Math.max(...p99s)); }).catch(() => {}),
+      
       fetch(endpoint + '/errors?days=30').then(r => r.json()),
       fetch(endpoint + '/projects').then(r => r.json()),
       fetch(endpoint + '/traces?limit=10').then(r => r.json()),
