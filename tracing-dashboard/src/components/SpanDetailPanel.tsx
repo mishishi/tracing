@@ -47,6 +47,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
   const [rating, setRating] = useState<number>(0);
   const [saving, setSaving] = useState(false);
   const [expandAllIO, setExpandAllIO] = useState(false);
+  const [messageViewMode, setMessageViewMode] = useState<'bubble' | 'raw'>('bubble');
 
   useEffect(() => {
     const tags = span.metadata.tags || {};
@@ -234,8 +235,28 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         {/* Prompt (LLM only) */}
         {isLLM && (metadata.messages || metadata.prompt || metadata.prompt_preview) && (
           <section>
-            <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
-            {metadata.messages ? (
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">输入 Prompt</h4>
+              {metadata.messages && (
+                <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-md">
+                  <button
+                    onClick={() => setMessageViewMode('bubble')}
+                    className={'px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ' +
+                      (messageViewMode === 'bubble' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+                  >
+                    气泡
+                  </button>
+                  <button
+                    onClick={() => setMessageViewMode('raw')}
+                    className={'px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ' +
+                      (messageViewMode === 'raw' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
+                  >
+                    原始
+                  </button>
+                </div>
+              )}
+            </div>
+            {metadata.messages && messageViewMode === 'bubble' ? (
               <MessageView content={metadata.messages} maxHeight={expandAllIO ? 99999 : 400} />
             ) : (
               <JsonBlock label="" content={metadata.prompt || metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} defaultViewMode="md" />
