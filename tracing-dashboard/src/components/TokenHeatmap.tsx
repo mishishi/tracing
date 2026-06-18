@@ -157,8 +157,8 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
         />
       </div>
 
-      <div className="bento overflow-x-auto py-3">
-        <div className="min-w-[680px]">
+      <div className="bento py-3" style={{ height: 256, display: 'flex', flexDirection: 'column' }}>
+        <div className="overflow-x-auto flex-1">
           {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: 28 }}>
             {monthLabels.map((m, i) => {
@@ -183,7 +183,7 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
                 <div
                   key={i}
                   className="text-[10px] text-gray-400 flex items-center justify-end pr-1.5"
-                  style={{ height: 14, lineHeight: '14px' }}
+                  style={{ height: 12, lineHeight: '12px' }}
                 >
                   {label}
                 </div>
@@ -191,15 +191,15 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
             </div>
 
             {/* Grid */}
-            <div className="flex flex-1" style={{ gap: 3 }}>
+            <div className="flex flex-1" style={{ gap: 2 }}>
               {weeks.map((week, wi) => (
-                <div key={wi} className="flex flex-col flex-1" style={{ gap: 3 }}>
+                <div key={wi} className="flex flex-col flex-1" style={{ gap: 2 }}>
                   {week.map((day, di) => {
                     if (!day) {
                       return (
                         <div
                           key={di}
-                          style={{ height: 14, borderRadius: 2 }}
+                          style={{ height: 12, width: '100%', minWidth: 10, borderRadius: 2 }}
                         />
                       );
                     }
@@ -256,6 +256,7 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
             </span>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Tooltip */}
