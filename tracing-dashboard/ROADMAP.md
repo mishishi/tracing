@@ -69,7 +69,7 @@
 
 ## 未来考虑
 
-- MessageView 接入 SpanDetailPanel（代码已有，未接上）
-- Session 搜索/过滤增强
-- 告警规则（错误率/延迟阈值）
-- Prometheus metrics 导出
+- ✅ MessageView 接入 SpanDetailPanel（聊天气泡 + 原始切换）
+- ✅ Session 搜索/过滤增强
+- ✅ 告警规则（错误率 + P99 延迟阈值，Overview 页）
+- ✅ Prometheus metrics 导出（/metrics 端点）
