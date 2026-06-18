@@ -273,12 +273,12 @@ function AppInner() {
             <LatencyHeatmap endpoint={endpoint} project={globalProject} />
             <PercentileTrend endpoint={endpoint} project={globalProject} />
             <ToolRanking endpoint={endpoint} project={globalProject} />
-            <DurationHistogram endpoint={endpoint} project={globalProject} />
-            <TraceViewer endpoint={endpoint} project={globalProject} initialTraceId={sharedTraceId} highlightQuery={highlightQuery} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <AgentFlow endpoint={endpoint} project={globalProject} />
               <ModelSankey endpoint={endpoint} project={globalProject} />
             </div>
+            <DurationHistogram endpoint={endpoint} project={globalProject} />
+            <TraceViewer endpoint={endpoint} project={globalProject} initialTraceId={sharedTraceId} highlightQuery={highlightQuery} />
           </div>
         )}
         {activeTab === 'costs' && <div className="space-y-6"><CostView endpoint={endpoint} /><WastefulTraces endpoint={endpoint} /></div>}
