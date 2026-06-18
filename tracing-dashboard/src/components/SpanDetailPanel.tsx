@@ -232,10 +232,14 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         )}
 
         {/* Prompt (LLM only) */}
-        {isLLM && (metadata.prompt || metadata.prompt_preview) && (
+        {isLLM && (metadata.messages || metadata.prompt || metadata.prompt_preview) && (
           <section>
             <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">输入 Prompt</h4>
-            <JsonBlock label="" content={metadata.prompt || metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} />
+            {metadata.messages ? (
+              <MessageView content={metadata.messages} maxHeight={expandAllIO ? 99999 : 400} />
+            ) : (
+              <JsonBlock label="" content={metadata.prompt || metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} defaultViewMode="md" />
+            )}
           </section>
         )}
 

@@ -7,6 +7,7 @@ from ..collector import send
 import re
 import uuid
 import threading
+import json
 
 logger = logging.getLogger("tracing.crewai")
 
@@ -259,6 +260,10 @@ def _patch_crewai():
                     content = str(last)
                 span.metadata["prompt_preview"] = content[:500]
                 span.metadata["prompt"] = content[:32000]
+                try:
+                    span.metadata["messages"] = json.dumps([{"role": m.get("role", "user"), "content": str(m.get("content", ""))[:2000]} for m in msgs[-6:]])
+                except:
+                    pass
             elif isinstance(msgs, str):
                 span.metadata["prompt_preview"] = msgs[:500]
                 span.metadata["prompt"] = msgs[:32000]
