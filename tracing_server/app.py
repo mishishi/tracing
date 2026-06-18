@@ -144,3 +144,68 @@ h1{font-size:20px;margin-bottom:4px}
         rows,
     )
     return HTMLResponse(html)
+
+# ── Prometheus /metrics ────────────────────────
+
+@app.get("/metrics")
+async def prometheus_metrics(project: str = ""):
+    """Expose Prometheus-compatible metrics for monitoring."""
+    from .store import _conn
+    import sqlite3
+
+    lines: list[str] = []
+
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+
+        # Total spans by project, kind, status
+        rows = db.execute("""
+            SELECT project, kind, status, COUNT(*) as cnt
+            FROM spans GROUP BY project, kind, status
+        """).fetchall()
+
+        lines.append("# HELP tracing_spans_total Total spans")
+        lines.append("# TYPE tracing_spans_total counter")
+        for r in rows:
+            proj = r["project"] or "default"
+            lines.append(f'tracing_spans_total{{project="{proj}",kind="{r["kind"]}",status="{r["status"]}"}} {r["cnt"]}')
+
+        # Error spans by project
+        rows = db.execute("""
+            SELECT project, COUNT(*) as cnt
+            FROM spans WHERE status='error' GROUP BY project
+        """).fetchall()
+
+        lines.append("# HELP tracing_errors_total Total error spans")
+        lines.append("# TYPE tracing_errors_total counter")
+        for r in rows:
+            proj = r["project"] or "default"
+            lines.append(f'tracing_errors_total{{project="{proj}"}} {r["cnt"]}')
+
+        # Average duration by kind
+        rows = db.execute("""
+            SELECT kind, AVG(duration_ms) as avg_ms, COUNT(*) as cnt
+            FROM spans WHERE duration_ms > 0 GROUP BY kind
+        """).fetchall()
+
+        lines.append("# HELP tracing_duration_ms_avg Average span duration in ms")
+        lines.append("# TYPE tracing_duration_ms_avg gauge")
+        for r in rows:
+            lines.append(f'tracing_duration_ms_avg{{kind="{r["kind"]}"}} {r["avg_ms"]:.1f}')
+
+        # Total traces
+        row = db.execute("SELECT COUNT(DISTINCT trace_id) as cnt FROM spans").fetchone()
+        total_traces = row["cnt"] if row else 0
+        lines.append("# HELP tracing_traces_total Total distinct traces")
+        lines.append("# TYPE tracing_traces_total counter")
+        lines.append(f"tracing_traces_total {total_traces}")
+
+        # Ingestion timestamp
+        import time
+        lines.append("# HELP tracing_last_scrape_timestamp Last metrics scrape timestamp")
+        lines.append("# TYPE tracing_last_scrape_timestamp gauge")
+        lines.append(f"tracing_last_scrape_timestamp {time.time():.0f}")
+
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
+
