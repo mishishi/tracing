@@ -34,7 +34,7 @@ interface LatencyHeatmapProps {
 export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) {
   const [data, setData] = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tooltip, setTooltip] = useState<{ kind: string; hour: number; avgMs: number; count: number } | null>(null);
+  const [tooltip, setTooltip] = useState<{ kind: string; hour: number; avgMs: number; count: number; x: number; y: number } | null>(null);
   const [days, setDays] = useState(7);
 
   const fetchData = () => {
@@ -115,6 +115,7 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-amber-500" />
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">延迟热力图</h3>
+          <span className="text-[11px] text-gray-400">过去 {days} 天按小时聚合</span>
         </div>
         <Dropdown
           value={String(days)}
@@ -177,8 +178,11 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
                       backgroundColor: hasData ? getHeatColor(avgMs) : 'var(--surface)',
                       border: hasData ? 'none' : '1px solid var(--border)',
                     }}
-                    onMouseEnter={() =>
-                      hasData && setTooltip({ kind, hour: h, avgMs, count })
+                    onMouseEnter={(e) =>
+                      hasData && setTooltip({ kind, hour: h, avgMs, count, x: e.clientX, y: e.clientY })
+                    }
+                    onMouseMove={(e) =>
+                      tooltip && setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)
                     }
                     onMouseLeave={() => setTooltip(null)}
                     title={hasData ? `${kindLabel[kind] || kind} ${h}:00 - 平均 ${fmtMs(avgMs)}, ${count} 次` : ''}
@@ -211,9 +215,8 @@ export function LatencyHeatmap({ endpoint, project = '' }: LatencyHeatmapProps) 
           style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
-            left: '50%',
-            bottom: 80,
-            transform: 'translateX(-50%)',
+            left: Math.min(tooltip.x + 12, window.innerWidth - 220),
+            top: tooltip.y - 80,
           }}
         >
           <div className="flex items-center gap-2 mb-1">
