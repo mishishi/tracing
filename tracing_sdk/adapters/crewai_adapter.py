@@ -253,11 +253,11 @@ def _patch_crewai():
             if isinstance(msgs, list) and msgs:
                 last = msgs[-1]
                 if isinstance(last, dict):
-                    content = last.get("content", "") or str(last)
+                    content = last.get("content", "") or json.dumps(last)
                     role = last.get("role", "user")
                     span.metadata["prompt_role"] = role
                 else:
-                    content = str(last)
+                    content = json.dumps(last) if isinstance(last, dict) else str(last)
                 span.metadata["prompt_preview"] = content[:500]
                 span.metadata["prompt"] = content[:32000]
                 try:
