@@ -61,9 +61,9 @@ tracing_sdk.init()
 | 模块 | 功能 |
 |------|------|
 | **总览** | 全局概览 · 延迟热力图 · Token 日历 · 调用趋势 · Span 类型分布 · 会话统计 |
-| **追踪** | Trace 列表（含分页/搜索/筛选）· 瀑布图 · 时间线 · Span 详情 · Session 分组 · 延迟百分位趋势 · 工具调用排行 · 耗时分布直方图 |
-| **成本** | 模型费用 · Token 分布 · 预算告警 |
-| **错误** | 错误率趋势 · 按类型/项目分析 · 点击跳转 Trace |
+| **追踪** | Trace 列表（含分页/搜索/筛选）· 瀑布图 · 时间线 · Span 详情 · Session 分组 · 延迟百分位趋势 · 工具调用排行 · 耗时分布直方图 · Agent 调用链路 · 模型调用分布 |
+| **成本** | 模型费用 · Token 分布 · 预算告警 · Token 浪费检测 |
+| **错误** | 错误率趋势 · 错误类型分布 · 按类型/项目分析 · 点击跳转 Trace |
 | **对比** | 多项目指标对比 · 趋势图 · 对比表格 |
 
 ---
@@ -96,6 +96,10 @@ tracing_sdk.init()
 | `/s/{id}` | GET | 访问分享 |
 | `/admin/spans` | DELETE | 删除项目数据 |
 | `/metrics` | GET | Prometheus 指标暴露 |
+| `/errors/by-type` | GET | 错误类型分类统计 |
+| `/traces/wasteful` | GET | Token 浪费检测（输入/输出比异常） |
+| `/agent-flow` | GET | Agent 调用链路 |
+| `/model-sankey` | GET | 模型调用分布 |
 
 ---
 
