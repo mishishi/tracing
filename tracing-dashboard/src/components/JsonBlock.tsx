@@ -132,9 +132,10 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
   const lineCount = content.split('\n').length;
 
   const parsed = useMemo(() => tryParseJson(content), [content]);
+  const isJson = parsed.ok;
   const pythonJson = useMemo(() => tryParsePythonDict(content), [content]);
   const hasStructuredView = isJson || !!pythonJson;
-  const isJson = parsed.ok;
+  
   const looksLikeMd = !isJson && (/^#{1,4}\s/m.test(content) || /\*\*/.test(content) || /^[-*]\s/m.test(content) || /^\|.*\|/m.test(content));
 
   return (
