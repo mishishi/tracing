@@ -110,7 +110,7 @@ export function useTraces({ endpoint, pollInterval = 15_000 }: UseTracesOptions)
       .catch((err) => {
         if (err.name !== 'AbortError') { /* stats are non-critical, ignore */ }
       });
-  }, [endpoint]);
+  }, [endpoint, projectFilter, statusFilter, kindFilter, timeRange]);
 
   // Refetch when filters change
   useEffect(() => {

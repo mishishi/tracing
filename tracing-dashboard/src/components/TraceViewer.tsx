@@ -24,9 +24,9 @@ import {
   PAGE_SIZE, type TraceSummary, type TraceData,
 } from '../utils/trace-utils';
 
-interface TraceViewerProps { endpoint: string; initialTraceId?: string; highlightQuery?: string; }
+interface TraceViewerProps { endpoint: string; project?: string; initialTraceId?: string; highlightQuery?: string; }
 
-export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: TraceViewerProps) {
+export function TraceViewer({ endpoint, project = '', initialTraceId, highlightQuery = '' }: TraceViewerProps) {
   const { success: toastSuccess, info: toastInfo } = useToast();
   const {
     traces, filteredTraces, stats, projects, loadingList,
@@ -40,6 +40,13 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
     dismissNotification,
     fetchError,
   } = useTraces({ endpoint });
+
+  // Sync project prop to internal projectFilter
+  useEffect(() => {
+    if (project !== projectFilter) {
+      setProjectFilter(project);
+    }
+  }, [project]);
 
   const [selected, setSelected] = useState<TraceData | null>(null);
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
@@ -256,8 +263,9 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
     ...projects.map((p) => ({ value: p, label: p })),
   ];
 
-  const paginatedTraces = filteredTraces.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const hasMore = (page + 1) * PAGE_SIZE < filteredTraces.length;
+  const clampedPage = Math.min(page, Math.max(0, totalPages - 1));
+  const paginatedTraces = filteredTraces.slice(clampedPage * PAGE_SIZE, (clampedPage + 1) * PAGE_SIZE);
+  const hasMore = (clampedPage + 1) * PAGE_SIZE < filteredTraces.length;
 
   // ── Render ──
   return (

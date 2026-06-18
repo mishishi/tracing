@@ -8,6 +8,7 @@ from fastapi.responses import PlainTextResponse
 from ..store import (
     get_costs, get_error_stats, get_latency_heatmap,
     get_percentiles, get_percentiles_trend, get_token_heatmap, get_call_trend,
+    get_tool_rank, get_agent_role_dist, get_duration_histogram, get_error_trend,
 )
 from .sse import sse_queues
 
@@ -69,6 +70,44 @@ async def call_trend(
 ):
     """Daily call count trend by kind."""
     return get_call_trend(project=project, days=days)
+
+
+
+@router.get("/tool-rank")
+async def tool_rank(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    """Tool call ranking by frequency."""
+    return get_tool_rank(project=project, days=days, limit=limit)
+
+
+@router.get("/agent-role-dist")
+async def agent_role_dist(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Agent role distribution."""
+    return get_agent_role_dist(project=project, days=days)
+
+
+@router.get("/duration-histogram")
+async def duration_histogram(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Duration distribution histogram by kind."""
+    return get_duration_histogram(project=project, days=days)
+
+
+@router.get("/error-trend")
+async def error_trend(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Daily error rate trend."""
+    return get_error_trend(project=project, days=days)
 
 
 @router.get("/metrics")

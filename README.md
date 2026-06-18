@@ -60,10 +60,10 @@ tracing_sdk.init()
 
 | 模块 | 功能 |
 |------|------|
-| **总览** | 全局概览 · 热门项目 · 延迟分布 |
-| **追踪** | Trace 列表 · 瀑布图 · 时间线 · Span 详情 · Session 分组 |
+| **总览** | 全局概览 · 延迟热力图 · Token 日历 · 调用趋势 · Span 类型分布 · 会话统计 |
+| **追踪** | Trace 列表（含分页/搜索/筛选）· 瀑布图 · 时间线 · Span 详情 · Session 分组 · 延迟百分位趋势 · 工具调用排行 · 耗时分布直方图 |
 | **成本** | 模型费用 · Token 分布 · 预算告警 |
-| **错误** | 错误率 · 按类型/项目分析 · 点击跳转 Trace |
+| **错误** | 错误率趋势 · 按类型/项目分析 · 点击跳转 Trace |
 | **对比** | 多项目指标对比 · 趋势图 · 对比表格 |
 
 ---
@@ -82,12 +82,20 @@ tracing_sdk.init()
 | `/costs` | GET | 成本统计 |
 | `/errors` | GET | 错误统计 |
 | `/latency-heatmap` | GET | 延迟热力图 |
-| `/percentiles-trend` | GET | 延迟趋势 |
+| `/percentiles-trend` | GET | 延迟百分位趋势 |
+| `/call-trend` | GET | 每日调用趋势（按类型堆叠） |
+| `/token-heatmap` | GET | Token 消耗日历热力图 |
+| `/tool-rank` | GET | 工具调用排行 |
+| `/agent-role-dist` | GET | Agent 角色分布 |
+| `/duration-histogram` | GET | 耗时分布直方图（按类型） |
+| `/error-trend` | GET | 每日错误率趋势 |
+| `/sessions` | GET | Session 列表 |
 | `/search` | GET | 搜索 Span |
 | `/events` | GET | SSE 实时推送 |
 | `/share` | POST | 创建分享链接 |
 | `/s/{id}` | GET | 访问分享 |
 | `/admin/spans` | DELETE | 删除项目数据 |
+| `/metrics` | GET | Prometheus 指标暴露 |
 
 ---
 

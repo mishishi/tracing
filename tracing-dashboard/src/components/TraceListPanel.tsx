@@ -127,7 +127,7 @@ export function TraceListPanel({
   const activeFilters = (projectFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (kindFilter ? 1 : 0) + (timeRange ? 1 : 0);
 
   return (
-    <div className={`w-full lg:w-80 shrink-0 flex-col gap-3 min-h-0 ${showList ? (mobileView === 'detail' ? 'hidden lg:flex' : 'flex') : 'hidden lg:flex'}`}>
+    <div className={`w-full lg:w-80 shrink-0 h-full flex-col gap-3 min-h-0 ${showList ? (mobileView === 'detail' ? 'hidden lg:flex' : 'flex') : 'hidden lg:flex'}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -414,7 +414,8 @@ export function TraceListPanel({
                   key={s.session_id}
                   onClick={() => {
                     setViewGroupBy('trace');
-                    setSearchQuery(s.session_id);
+                    setSearchQuery(s.session_id || '');
+                    if (s.project) setProjectFilter(s.project);
                   }}
                   className="bento p-3 hover:border-indigo-300 dark:hover:border-indigo-700 cursor-pointer transition-all group"
                 >
@@ -461,14 +462,7 @@ export function TraceListPanel({
         </>
       )}
 
-      {/* Infinite scroll sentinel */}
-      {hasMore && (
-        <InfiniteScrollSentinel
-          hasMore={hasMore}
-          onLoadMore={() => setPage(page + 1)}
-          loading={loadingList}
-        />
-      )}
+      {/* Infinite scroll removed — pagination via virtual scroll */}
     </div>
   );
 }
@@ -478,17 +472,19 @@ function InfiniteScrollSentinel({ hasMore, onLoadMore, loading }: {
   hasMore: boolean; onLoadMore: () => void; loading: boolean;
 }) {
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
 
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el || !hasMore || loading) return;
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) onLoadMore(); },
+      ([entry]) => { if (entry.isIntersecting) onLoadMoreRef.current(); },
       { rootMargin: "100px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [hasMore, onLoadMore, loading]);
+  }, [hasMore, loading]);
 
   if (!hasMore && !loading) return null;
 

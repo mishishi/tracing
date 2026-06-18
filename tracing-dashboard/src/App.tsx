@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import {
   BarChart3, Server, RefreshCw, DollarSign,
   Wifi, WifiOff, ChevronDown, Globe, Check, Copy, Plus, Trash2,
@@ -14,6 +14,9 @@ import { ErrorPanel } from './components/ErrorPanel';
 import { LatencyHeatmap } from './components/LatencyHeatmap';
 import { PercentileTrend } from './components/PercentileTrend';
 import { ComparisonView } from './components/ComparisonView';
+import { ToolRanking } from './components/ToolRanking';
+import { DurationHistogram } from './components/DurationHistogram';
+import { ErrorTrendChart } from './components/ErrorTrendChart';
 import { Overview } from './components/Overview';
 import { SearchBar } from './components/SearchBar';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
@@ -265,11 +268,13 @@ function AppInner() {
           <div className="space-y-6">
             <LatencyHeatmap endpoint={endpoint} project={globalProject} />
             <PercentileTrend endpoint={endpoint} project={globalProject} />
-            <TraceViewer endpoint={endpoint} initialTraceId={sharedTraceId} highlightQuery={highlightQuery} />
+            <ToolRanking endpoint={endpoint} project={globalProject} />
+            <DurationHistogram endpoint={endpoint} project={globalProject} />
+            <TraceViewer endpoint={endpoint} project={globalProject} initialTraceId={sharedTraceId} highlightQuery={highlightQuery} />
           </div>
         )}
         {activeTab === 'costs' && <CostView endpoint={endpoint} />}
-        {activeTab === 'errors' && <ErrorPanel endpoint={endpoint} onNavigateToTrace={(traceId) => { setSharedTraceId(traceId); setActiveTab('traces'); }} />}
+        {activeTab === 'errors' && <div className="space-y-6"><ErrorTrendChart endpoint={endpoint} /><ErrorPanel endpoint={endpoint} onNavigateToTrace={(traceId) => { setSharedTraceId(traceId); setActiveTab('traces'); }} /></div>}
         {activeTab === 'compare' && <ComparisonView endpoint={endpoint} />}
       </main>
 
@@ -315,3 +320,4 @@ export default function App() {
     </ThemeProvider>
   );
 }
+

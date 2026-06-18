@@ -1,7 +1,8 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { DollarSign, TrendingUp, Cpu, Layers, BarChart3, Bell, BellRing } from 'lucide-react';
 import { SkeletonStats, SkeletonBlock } from './Skeleton';
 import { TokenHistogram } from './TokenHistogram';
+import { ModelCallDist } from './ModelCallDist';
 import { useCostData, type CostsData, type ModelBreakdown, type ProjectBreakdown } from '../hooks/useCostData';
 
 function fmtCost(n: number): string {
@@ -252,3 +253,4 @@ export function CostView({ endpoint, project = '' }: CostViewProps) {
     </div>
   );
 }
+

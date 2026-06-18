@@ -956,6 +956,169 @@ def compare_traces(trace_a: str, trace_b: str) -> dict | None:
         "only_b": only_b,
     }
 
+
+
+# ── Tool ranking ──────────────────────────────
+
+def get_tool_rank(project: str = "", days: int = 30, limit: int = 20) -> dict:
+    """Aggregate tool_call spans by tool_name from metadata."""
+    import sqlite3
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE kind = 'tool_call' AND json_extract(metadata, '$.tool_name') IS NOT NULL AND json_extract(metadata, '$.tool_name') != ''"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+        rows = db.execute(
+            f"SELECT json_extract(metadata, '$.tool_name') as tool_name, "
+            f"COUNT(*) as calls, "
+            f"SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as errors, "
+            f"ROUND(AVG(duration_ms)) as avg_duration_ms "
+            f"FROM spans {where} "
+            f"GROUP BY tool_name ORDER BY calls DESC LIMIT ?",
+            params + [limit]
+        ).fetchall()
+        return {"tools": [dict(r) for r in rows]}
+
+
+# ── Agent role distribution ───────────────────
+
+def get_agent_role_dist(project: str = "", days: int = 30) -> dict:
+    """Aggregate agent spans by agent_role from metadata."""
+    import sqlite3
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE kind = 'agent' AND json_extract(metadata, '$.agent_role') IS NOT NULL AND json_extract(metadata, '$.agent_role') != ''"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+        rows = db.execute(
+            f"SELECT json_extract(metadata, '$.agent_role') as agent_role, "
+            f"COUNT(*) as spans, "
+            f"SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as errors, "
+            f"ROUND(AVG(duration_ms)) as avg_duration_ms "
+            f"FROM spans {where} "
+            f"GROUP BY agent_role ORDER BY spans DESC",
+            params
+        ).fetchall()
+        return {"roles": [dict(r) for r in rows]}
+
+
+# ── Duration histogram ────────────────────────
+
+def get_duration_histogram(project: str = "", days: int = 30) -> dict:
+    """Bucket spans by duration_ms range, grouped by kind."""
+    import sqlite3
+    BUCKETS = [
+        ("<100ms", 0, 100),
+        ("100-500ms", 100, 500),
+        ("500ms-1s", 500, 1000),
+        ("1-5s", 1000, 5000),
+        ("5-10s", 5000, 10000),
+        (">10s", 10000, 1e12),
+    ]
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE duration_ms > 0"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+
+        # Build a CASE expression for bucket labels
+        bucket_sql = "CASE "
+        for label, lo, hi in BUCKETS:
+            if hi == 1e12:
+                bucket_sql += f"WHEN duration_ms >= {lo} THEN '{label}' "
+            else:
+                bucket_sql += f"WHEN duration_ms >= {lo} AND duration_ms < {hi} THEN '{label}' "
+        bucket_sql += "END"
+
+        # Get full bucket × kind matrix
+        kinds = ["llm_call", "tool_call", "agent", "phase", "flow"]
+        rows = db.execute(
+            f"SELECT kind, {bucket_sql} as bucket, COUNT(*) as cnt "
+            f"FROM spans {where} "
+            f"GROUP BY kind, bucket ORDER BY kind, bucket",
+            params
+        ).fetchall()
+
+    # Build matrix: rows = kinds, cols = buckets
+    bucket_labels = [b[0] for b in BUCKETS]
+    data = {k: {b: 0 for b in bucket_labels} for k in kinds}
+    for r in rows:
+        k = r["kind"]
+        b = r["bucket"]
+        if k in data and b in data[k]:
+            data[k][b] = r["cnt"]
+
+    series = []
+    for k in kinds:
+        vals = [data[k][b] for b in bucket_labels]
+        if sum(vals) > 0:
+            series.append({"kind": k, "data": vals})
+    return {"buckets": bucket_labels, "series": series}
+
+
+# ── Error trend ───────────────────────────────
+
+def get_error_trend(project: str = "", days: int = 30) -> dict:
+    """Daily error count and rate over time."""
+    import sqlite3
+    from datetime import date, timedelta
+    from collections import defaultdict
+
+    today = date.today()
+    day_list = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+    day_index = {d: i for i, d in enumerate(day_list)}
+
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE start_time IS NOT NULL"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        where += " AND start_time >= date('now', ?)"
+        params.append(f'-{days} days')
+
+        rows = db.execute(
+            f"SELECT DATE(start_time, 'localtime') as day, "
+            f"COUNT(*) as total, "
+            f"SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as errors "
+            f"FROM spans {where} "
+            f"GROUP BY day ORDER BY day",
+            params
+        ).fetchall()
+
+    by_day: dict = defaultdict(lambda: {"total": 0, "errors": 0})
+    for r in rows:
+        by_day[r["day"]] = {"total": r["total"], "errors": r["errors"]}
+
+    points = []
+    for d in day_list:
+        entry = by_day.get(d, {"total": 0, "errors": 0})
+        rate = round((entry["errors"] / entry["total"]) * 100, 2) if entry["total"] > 0 else 0
+        points.append({
+            "day": d,
+            "total": entry["total"],
+            "errors": entry["errors"],
+            "rate": rate,
+        })
+    return {"points": points}
+
+
 # ── StorageBackend adapter ────────────────────
 
 class SQLiteBackend:
@@ -983,3 +1146,8 @@ class SQLiteBackend:
     create_share = staticmethod(create_share)
     get_share = staticmethod(get_share)
     cleanup_expired_shares = staticmethod(cleanup_expired_shares)
+    get_tool_rank = staticmethod(get_tool_rank)
+    get_agent_role_dist = staticmethod(get_agent_role_dist)
+    get_duration_histogram = staticmethod(get_duration_histogram)
+    get_error_trend = staticmethod(get_error_trend)
+

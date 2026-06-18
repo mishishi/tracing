@@ -5,7 +5,6 @@ import asyncio
 
 from fastapi import FastAPI, Request
 import json
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from .routers import register_routers, shutdown_sse
@@ -16,7 +15,7 @@ logger = __import__("logging").getLogger("tracing.server")
 
 RETENTION_DAYS = int(os.environ.get("TRACING_RETENTION_DAYS", "30"))
 
-# ── Unicode-friendly JSON ─────────────────────
+# ── Unicode-friendly JSON ──────────────────────
 from fastapi.responses import JSONResponse
 
 class UnicodeJSONResponse(JSONResponse):
@@ -25,14 +24,24 @@ class UnicodeJSONResponse(JSONResponse):
 
 app = FastAPI(title="Tracing Server", version="0.3.0", default_response_class=UnicodeJSONResponse)
 
-# ── CORS ──────────────────────────────────────
+# ── CORS ─────────────────────────
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        from fastapi.responses import Response
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Max-Age": "86400",
+            },
+        )
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
 # ── Register routers ──────────────────────────
 
@@ -72,7 +81,11 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
-    await shutdown_sse()
+    try:
+        await shutdown_sse()
+    except Exception:
+        pass
+    await asyncio.sleep(0.1)
 
 
 # ── Auto-cleanup background task ─────────────

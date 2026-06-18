@@ -1,4 +1,4 @@
-import { EmptyState } from './EmptyState';
+﻿import { EmptyState } from './EmptyState';
 import { useState, useEffect } from 'react';
 import {
   Layers, BarChart3, DollarSign, AlertTriangle,
@@ -7,6 +7,8 @@ import {
 import { SkeletonStats } from './Skeleton';
 import { TokenHeatmap } from './TokenHeatmap';
 import { CallTrendChart } from './CallTrendChart';
+import { SpanKindDonut } from './SpanKindDonut';
+import { SessionStats } from './SessionStats';
 
 interface OverviewStats {
   total_spans: number;
@@ -210,6 +212,10 @@ Promise.all([
         <TokenHeatmap endpoint={endpoint} />
       </div>
 
+      <SpanKindDonut endpoint={endpoint} />
+
+      <SessionStats endpoint={endpoint} />
+
       {/* Project Summary Table */}
       <div className="bento">
         <div className="flex items-center gap-2 mb-4">
@@ -323,3 +329,4 @@ function StatCard({ icon, label, value, color, sub }: {
     </div>
   );
 }
+
