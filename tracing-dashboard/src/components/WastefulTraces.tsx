@@ -44,7 +44,7 @@ export function WastefulTraces({ endpoint, project = "" }: WastefulTracesProps) 
   useEffect(() => {
     const params = new URLSearchParams();
     if (project) params.set("project", project);
-    fetch(endpoint + "/traces/wasteful?" + params.toString())
+    fetch(endpoint + "/wasteful-traces?" + params.toString())
       .then((r) => r.json())
       .then((d) => { setTraces(d.traces || []); setTotal(d.total_wasteful || 0); })
       .catch(() => {})

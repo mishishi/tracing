@@ -125,7 +125,7 @@ async def error_by_type(
     return get_error_types(project=project, days=days)
 
 
-@router.get("/traces/wasteful")
+@router.get("/wasteful-traces")
 async def wasteful_traces(
     project: str = Query(default=""),
     days: int = Query(default=30, ge=1, le=365),
