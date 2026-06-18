@@ -604,6 +604,59 @@ def get_token_heatmap(project: str = "", days: int = 30) -> dict:
         }
 
 
+def get_call_trend(project: str = "", days: int = 30) -> dict:
+    """Daily call counts by kind for trend chart."""
+    import sqlite3
+
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+
+        where = "WHERE kind IN ('llm_call', 'tool_call', 'agent') AND start_time IS NOT NULL"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+
+        rows = db.execute(
+            f"SELECT kind, DATE(start_time, 'localtime') as day, COUNT(*) as cnt "
+            f"FROM spans {where} "
+            f"GROUP BY kind, day ORDER BY kind, day",
+            params
+        ).fetchall()
+
+    from datetime import date, timedelta
+    from collections import defaultdict
+
+    today = date.today()
+    day_list = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+    day_index = {d: i for i, d in enumerate(day_list)}
+
+    kinds_order = ["llm_call", "tool_call", "agent"]
+    kind_data: dict[str, list[int]] = {k: [0] * days for k in kinds_order}
+    seen_kinds: set[str] = set()
+
+    for row in rows:
+        k = row["kind"]
+        d = row["day"]
+        if d not in day_index:
+            continue
+        seen_kinds.add(k)
+        kind_data[k][day_index[d]] = row["cnt"] or 0
+
+    # Only include kinds that have data
+    kinds = [k for k in kinds_order if k in seen_kinds]
+    series = [{"kind": k, "data": kind_data[k]} for k in kinds]
+
+    return {
+        "days": day_list,
+        "kinds": kinds,
+        "series": series,
+    }
+
+
 def init_shares_table():
     """Create shares table if not exists."""
     with _conn() as db:

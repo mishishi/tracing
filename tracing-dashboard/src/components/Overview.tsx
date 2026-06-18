@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { SkeletonStats } from './Skeleton';
 import { TokenHeatmap } from './TokenHeatmap';
+import { CallTrendChart } from './CallTrendChart';
 
 interface OverviewStats {
   total_spans: number;
