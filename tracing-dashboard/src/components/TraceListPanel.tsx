@@ -94,6 +94,7 @@ export function TraceListPanel({
   const projOpts = [...new Set(projects.filter(Boolean).sort())].map((p) => ({ value: p, label: p }));
   const grouped = viewGroupBy === 'summary' ? groupByProject(filteredTraces) : {};
   const [showFilterPopover, setShowFilterPopover] = useState(false);
+  const [sessionSearch, setSessionSearch] = useState('');
 
   const statusOpts = [
     { value: '', label: '全部状态' },
@@ -369,14 +370,45 @@ export function TraceListPanel({
 
       {/* Session view */}
       {viewGroupBy === 'session' && (
-        <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-1.5">
-          {sessionsLoading ? <SkeletonTraceList /> : sessions.length === 0 ? (
+        <>
+          {/* Session search bar */}
+          <div className="px-2 pt-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="搜索会话 ID 或项目..."
+                value={sessionSearch}
+                onChange={(e) => setSessionSearch(e.target.value)}
+                className="w-full pl-7 pr-3 py-1.5 text-[11px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-500 placeholder-gray-400"
+              />
+              {sessionSearch && (
+                <button onClick={() => setSessionSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-1.5">
+          {(() => {
+            const filtered = sessions.filter((s: SessionSummary) => {
+              if (!sessionSearch.trim()) return true;
+              const q = sessionSearch.toLowerCase();
+              return s.session_id.toLowerCase().includes(q) || (s.project || '').toLowerCase().includes(q);
+            });
+            if (sessionsLoading) return <SkeletonTraceList />;
+            if (filtered.length === 0) return (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Search className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="text-sm text-gray-400">{sessions.length === 0 ? '暂无会话数据' : '无匹配的会话'}</p>
+              </div>
+            );
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Inbox className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
               <p className="text-sm text-gray-400">暂无会话数据</p>
             </div>
           ) : (
-            sessions.map((s: SessionSummary) => {
+            filtered.map((s: SessionSummary) => {
               const durationSec = s.total_duration_ms ? Math.round(s.total_duration_ms / 1000) : 0;
               const durationStr = durationSec >= 3600 ? Math.round(durationSec / 3600) + 'h ' + Math.round((durationSec % 3600) / 60) + 'm' :
                 durationSec >= 60 ? Math.round(durationSec / 60) + 'm ' + (durationSec % 60) + 's' : durationSec + 's';
@@ -428,8 +460,9 @@ export function TraceListPanel({
                 </div>
               );
             })
-          )}
+          })()}
         </div>
+        </>
       )}
 
       {/* Infinite scroll sentinel */}
