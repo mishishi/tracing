@@ -204,6 +204,12 @@ Promise.all([
         />
       </div>
 
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <CallTrendChart endpoint={endpoint} />
+        <TokenHeatmap endpoint={endpoint} />
+      </div>
+
       {/* Project Summary Table */}
       <div className="bento">
         <div className="flex items-center gap-2 mb-4">
