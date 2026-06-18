@@ -672,7 +672,212 @@ def get_call_trend(project: str = "", days: int = 30) -> dict:
     }
 
 
+def init_webhooks_table():
+    with _conn() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS webhooks (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                events TEXT NOT NULL DEFAULT '["error_rate","slow_trace"]',
+                project TEXT DEFAULT '',
+                enabled INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_webhook_enabled ON webhooks(enabled)")
+
+
+def list_webhooks() -> list[dict]:
+    """List all webhook configurations."""
+    import sqlite3
+    try:
+        with _conn() as db:
+            db.row_factory = sqlite3.Row
+            rows = db.execute("SELECT * FROM webhooks ORDER BY created_at DESC").fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def create_webhook(name: str, url: str, events: list[str] | None = None, project: str = "") -> dict | None:
+    """Create a new webhook."""
+    import secrets, json
+    wid = secrets.token_hex(4)
+    evts = json.dumps(events or ["error_rate", "slow_trace"], ensure_ascii=False)
+    with _conn() as db:
+        db.execute(
+            "INSERT INTO webhooks (id, name, url, events, project) VALUES (?, ?, ?, ?, ?)",
+            (wid, name, url, evts, project),
+        )
+    return {"id": wid, "name": name, "url": url, "events": evts, "project": project, "enabled": 1}
+
+
+def delete_webhook(wid: str) -> bool:
+    """Delete a webhook by id."""
+    with _conn() as db:
+        db.execute("DELETE FROM webhooks WHERE id = ?", (wid,))
+        return db.total_changes > 0
+
+
+def update_webhook(wid: str, **kwargs) -> bool:
+    """Update webhook fields."""
+    import json
+    fields = []
+    vals: list = []
+    for k, v in kwargs.items():
+        if k in ("name", "url", "project"):
+            fields.append(f"{k} = ?")
+            vals.append(v)
+        elif k == "events":
+            fields.append("events = ?")
+            vals.append(json.dumps(v, ensure_ascii=False))
+        elif k == "enabled":
+            fields.append("enabled = ?")
+            vals.append(1 if v else 0)
+    if not fields:
+        return False
+    fields.append("updated_at = datetime('now')")
+    vals.append(wid)
+    with _conn() as db:
+        db.execute(f"UPDATE webhooks SET {', '.join(fields)} WHERE id = ?", vals)
+        return db.total_changes > 0
+
+
+# ── Alert rules ──────────────────────────────
+
+_ALERT_CHECK_INTERVAL = 60  # seconds
+
+
+async def check_alert_rules():
+    """Background task: periodically check alert rules and fire webhooks."""
+    import asyncio, json as _json
+    while True:
+        try:
+            await asyncio.sleep(_ALERT_CHECK_INTERVAL)
+            await _fire_alerts()
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            import logging
+            logging.getLogger("tracing.store").exception("Alert check failed")
+
+
+async def _fire_alerts():
+    """Check all alert rules and fire matching webhooks."""
+    import sqlite3, json as _json, asyncio
+    import urllib.request
+    webhooks = list_webhooks()
+    active = [w for w in webhooks if w.get("enabled")]
+    if not active:
+        return
+    
+    alerts: list[dict] = []
+    for w in active:
+        try:
+            events = _json.loads(w.get("events", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            events = ["error_rate", "slow_trace"]
+        
+        with _conn() as db:
+            db.row_factory = sqlite3.Row
+            
+            # Check error rate in last 5 minutes
+            if "error_rate" in events:
+                total = db.execute(
+                    "SELECT COUNT(*) as c FROM spans WHERE start_time >= datetime('now', '-5 minutes')"
+                ).fetchone()["c"]
+                errs = db.execute(
+                    "SELECT COUNT(*) as c FROM spans WHERE status='error' AND start_time >= datetime('now', '-5 minutes')"
+                ).fetchone()["c"]
+                if total > 10 and (errs / total) > 0.1:
+                    alerts.append({
+                        "webhook": w,
+                        "type": "error_rate",
+                        "title": "错误率告警",
+                        "message": f"过去 5 分钟错误率 {errs}/{total} ({errs/total*100:.1f}%) 超过 10% 阈值",
+                        "severity": "warning",
+                        "data": {"errors": errs, "total": total, "rate": round(errs/total*100, 1)},
+                    })
+            
+            # Check slow traces in last 5 minutes
+            if "slow_trace" in events:
+                slow = db.execute(
+                    "SELECT trace_id, project, duration_ms FROM spans WHERE duration_ms > 300000 AND start_time >= datetime('now', '-5 minutes') LIMIT 5"
+                ).fetchall()
+                if slow:
+                    for s in slow:
+                        alerts.append({
+                            "webhook": w,
+                            "type": "slow_trace",
+                            "title": "慢 Trace 告警",
+                            "message": f"Trace {s['trace_id'][:12]} 耗时 {s['duration_ms']/1000:.0f}s，项目 {s['project']}",
+                            "severity": "info",
+                            "data": {"trace_id": s["trace_id"], "duration_ms": s["duration_ms"], "project": s["project"]},
+                        })
+    
+    # Send webhooks (dedup by webhook id and alert type)
+    seen: set[tuple] = set()
+    for alert in alerts:
+        key = (alert["webhook"]["id"], alert["type"])
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            await _send_webhook(alert["webhook"]["url"], alert)
+        except Exception:
+            pass
+
+
+async def _send_webhook(url: str, payload: dict):
+    """Send webhook POST to Slack/Feishu compatible endpoint."""
+    import json as _json, asyncio
+    
+    # Build message for Slack and Feishu
+    color_map = {"critical": "danger", "warning": "warning", "info": "good"}
+    
+    slack_payload = {
+        "attachments": [{
+            "color": color_map.get(payload.get("severity", "info"), "good"),
+            "title": payload.get("title", "Tracing Alert"),
+            "text": payload.get("message", ""),
+            "fields": [
+                {"title": k, "value": str(v), "short": True}
+                for k, v in payload.get("data", {}).items()
+            ],
+            "footer": "Tracing Dashboard",
+            "ts": __import__("time").time(),
+        }]
+    }
+    
+    # Try Slack first, then Feishu format
+    body = _json.dumps(slack_payload).encode("utf-8")
+    
+    import urllib.request
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, lambda: urllib.request.urlopen(req, timeout=5))
+
 def init_shares_table():
+    """Create shares table if not exists."""
+    with _conn() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS shares (
+                share_id TEXT PRIMARY KEY,
+                trace_id TEXT DEFAULT '',
+                project TEXT DEFAULT '',
+                view_state TEXT DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                expires_at TEXT NOT NULL DEFAULT (datetime('now', '+30 days'))
+            )
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_share_id ON shares(share_id)")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_share_expires ON shares(expires_at)")
+
+
+
     """Create shares table if not exists."""
     with _conn() as db:
         db.execute("""
@@ -827,8 +1032,11 @@ def search_spans(query: str, project: str = "", limit: int = 50) -> list[dict]:
 # Initialize DB on import
 init_db()
 init_shares_table()
-
-
+try:
+    init_webhooks_table()
+except Exception:
+    # Failed to init webhooks table (DB may be readonly occasionally)
+    pass
 
 def update_span(span_id: str, tags: dict | None = None, notes: str | None = None) -> bool:
     """Update span tags and/or notes. Returns True if span found."""

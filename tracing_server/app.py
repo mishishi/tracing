@@ -77,6 +77,12 @@ register_routers(app)
 async def startup():
     init_db()
     asyncio.create_task(_auto_cleanup_loop())
+    # Start alert check background task
+    try:
+        from .store import check_alert_rules
+        asyncio.create_task(check_alert_rules())
+    except Exception:
+        pass
 
 
 @app.on_event("shutdown")
