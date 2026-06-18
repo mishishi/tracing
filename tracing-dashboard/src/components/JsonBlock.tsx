@@ -160,7 +160,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               />
             </div>
           )}
-          {(hasStructuredView || looksLikeMd || content.length > 20) && (
+          {(content.length > 20) && (
             <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-md">
               <button
                 onClick={() => setViewMode('raw')}
@@ -169,7 +169,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               >
                 原始
               </button>
-              {hasStructuredView && (
+              {content.length > 20 && (
                 <button
                   onClick={() => setViewMode('json')}
                   className={'px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ' +
@@ -204,10 +204,14 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
           style={{ maxHeight: expanded ? 'none' : maxHeight }}
           dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
         />
-      ) : viewMode === 'json' && hasStructuredView ? (
+      ) : viewMode === 'json' ? (
         <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-x-auto overflow-y-hidden font-mono text-gray-300 transition-all"
           style={{ maxHeight: expanded ? 'none' : maxHeight }}>
-          <JsonNode value={isJson ? parsed.value : JSON.parse(pythonJson!)} />
+          {hasStructuredView ? (
+            <JsonNode value={isJson ? parsed.value : JSON.parse(pythonJson!)} />
+          ) : (
+            <span className="text-gray-400 italic">无法解析为结构化数据，显示原始内容：</span>
+          )}
         </pre>
       ) : (
         <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
