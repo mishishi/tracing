@@ -2,7 +2,7 @@ import { EmptyState } from './EmptyState';
 import { useState, useEffect } from 'react';
 import {
   Layers, BarChart3, DollarSign, AlertTriangle,
-  Activity, TrendingUp, Clock,
+  Activity, TrendingUp, Clock, Bell, BellRing, Settings, X,
 } from 'lucide-react';
 import { SkeletonStats } from './Skeleton';
 
@@ -73,6 +73,10 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [recent, setRecent] = useState<RecentTrace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAlertSettings, setShowAlertSettings] = useState(false);
+  const [errorThreshold, setErrorThreshold] = useState<number>(() => Number(localStorage.getItem('tracing-alert-error-rate') || 0));
+  const [latencyThreshold, setLatencyThreshold] = useState<number>(() => Number(localStorage.getItem('tracing-alert-latency-ms') || 0));
+  const [p99Latency, setP99Latency] = useState<number>(0);
 
   useEffect(() => {
     setLoading(true);
@@ -116,6 +120,10 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [endpoint]);
+
+  // Persist alert thresholds
+  useEffect(() => { localStorage.setItem('tracing-alert-error-rate', String(errorThreshold)); }, [errorThreshold]);
+  useEffect(() => { localStorage.setItem('tracing-alert-latency-ms', String(latencyThreshold)); }, [latencyThreshold]);
 
   if (loading) return <SkeletonStats />;
 
