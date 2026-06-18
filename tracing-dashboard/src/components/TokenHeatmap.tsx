@@ -158,7 +158,7 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
         />
       </div>
 
-      <div className="bento py-3 px-2 flex flex-col" style={{ height: 256 }}>
+      <div className="bento py-3 px-2 flex flex-col" style={{ height: 290 }}>
         <div className="flex-1 overflow-x-auto">
           {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: 28 }}>
