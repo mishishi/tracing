@@ -10,6 +10,7 @@ interface JsonBlockProps {
   defaultExpanded?: boolean;
   searchable?: boolean;
   defaultViewMode?: 'raw' | 'json' | 'md';
+  hideToggle?: boolean;
 }
 
 function tryParseJson(text: string): { ok: boolean; value: any } {
@@ -112,7 +113,7 @@ function JsonObject({ value, depth }: { value: Record<string, any>; depth: numbe
   );
 }
 
-export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = false, searchable = false, defaultViewMode = 'raw' }: JsonBlockProps) {
+export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = false, searchable = false, defaultViewMode = 'raw', hideToggle = false }: JsonBlockProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'raw' | 'json' | 'md'>(defaultViewMode);
@@ -160,7 +161,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               />
             </div>
           )}
-          {(content.length > 20) && (
+          {!hideToggle && content.length > 20 && (
             <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-md">
               <button
                 onClick={() => setViewMode('raw')}

@@ -259,7 +259,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
             {metadata.messages && messageViewMode === 'bubble' ? (
               <MessageView content={metadata.messages} maxHeight={expandAllIO ? 99999 : 400} />
             ) : (
-              <JsonBlock label="" content={metadata.prompt || metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} defaultViewMode="md" />
+              <JsonBlock label="" content={metadata.prompt || metadata.prompt_preview} maxHeight={expandAllIO ? 99999 : 400} defaultExpanded={expandAllIO} defaultViewMode="md" hideToggle />
             )}
           </section>
         )}
