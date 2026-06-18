@@ -1121,6 +1121,255 @@ def get_error_trend(project: str = "", days: int = 30) -> dict:
 
 # ── StorageBackend adapter ────────────────────
 
+
+
+# ── Error type classification ─────────────────
+
+_ERROR_PATTERNS = [
+    ("API 连接错误", "APIConnectionError", "Connection", "timeout", "disconnected"),
+    ("认证失败", "API_KEY", "Authentication", "Unauthorized", "403", "401"),
+    ("速率限制", "RateLimit", "429", "rate_limit_exceeded"),
+    ("模型不存在", "ModelNotFound", "model_not_found", "404"),
+    ("上下文超长", "context_length", "token_limit", "max_tokens"),
+    ("服务端错误", "500", "InternalServer", "ServiceUnavailable"),
+    ("内容过滤", "content_filter", "moderation", "safety"),
+    ("API 调用失败", "API call failed", "litellm."),
+]
+
+
+def classify_error(error_text: str) -> str:
+    """Classify error message into a category."""
+    if not error_text:
+        return "未知"
+    text_lower = error_text.lower()
+    for label, *patterns in _ERROR_PATTERNS:
+        for p in patterns:
+            if p.lower() in text_lower:
+                return label
+    return "其他错误"
+
+
+def get_error_types(project: str = "", days: int = 30) -> dict:
+    """Aggregate errors by classified type."""
+    import sqlite3
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE status = 'error' AND error != ''"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+        rows = db.execute(f"SELECT error FROM spans {where}", params).fetchall()
+    categories: dict[str, int] = {}
+    for r in rows:
+        cat = classify_error(r["error"] or "")
+        categories[cat] = categories.get(cat, 0) + 1
+    sorted_cats = sorted(categories.items(), key=lambda x: -x[1])
+    return {"types": [{"type": k, "count": v} for k, v in sorted_cats]}
+
+
+# ── Token waste detection ─────────────────────
+
+def get_wasteful_traces(project: str = "", days: int = 30, limit: int = 20) -> dict:
+    """Find traces with extreme input/output token ratios."""
+    import sqlite3, json
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE kind = 'llm_call' AND metadata LIKE '%token%'"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+        rows = db.execute(
+            f"SELECT trace_id, name, project, duration_ms, start_time, error, metadata FROM spans {where} ORDER BY start_time DESC",
+            params
+        ).fetchall()
+    
+    traces: list[dict] = []
+    for r in rows:
+        try:
+            md = json.loads(r["metadata"] or "{}")
+        except json.JSONDecodeError:
+            continue
+        inp = md.get("input_tokens", 0) or 0
+        out = md.get("output_tokens", 0) or 0
+        total = inp + out
+        if total == 0:
+            continue
+        ratio = out / max(inp, 1)
+        # Waste markers: very high output vs input or very low output vs input
+        waste_score = 0
+        reasons: list[str] = []
+        if inp > 5000 and out < 100:
+            waste_score += inp // 100
+            reasons.append(f"高输入({inp})低输出({out})")
+        if ratio > 20:
+            waste_score += int(ratio * 10)
+            reasons.append(f"输出/输入比 {ratio:.1f}x")
+        if total > 20000:
+            waste_score += total // 1000
+            reasons.append(f"总Token({total})过高")
+        if waste_score > 0:
+            traces.append({
+                "trace_id": r["trace_id"],
+                "name": r["name"],
+                "project": r["project"],
+                "duration_ms": r["duration_ms"],
+                "input_tokens": inp,
+                "output_tokens": out,
+                "total_tokens": total,
+                "ratio": round(ratio, 2),
+                "waste_score": waste_score,
+                "reasons": reasons,
+                "start_time": r["start_time"],
+            })
+    traces.sort(key=lambda x: -x["waste_score"])
+    return {"traces": traces[:limit], "total_wasteful": len(traces)}
+
+
+# ── Agent flow analysis ───────────────────────
+
+def get_agent_flow(project: str = "", days: int = 30) -> dict:
+    """Build parent-child call chain between agents/tools/LLMs."""
+    import sqlite3, json
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE 1=1"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+        rows = db.execute(
+            f"SELECT id, trace_id, parent_id, kind, name, metadata FROM spans {where} ORDER BY start_time",
+            params
+        ).fetchall()
+    
+    # Build links: parent -> child, grouped by (parent_kind, child_kind, parent_label, child_label)
+    from collections import defaultdict
+    links: dict[tuple, dict] = defaultdict(lambda: {"count": 0, "total_duration_ms": 0})
+    span_map: dict[str, dict] = {}
+    for r in rows:
+        span_map[r["id"]] = {
+            "id": r["id"],
+            "trace_id": r["trace_id"],
+            "kind": r["kind"],
+            "name": r["name"],
+            "parent_id": r["parent_id"],
+        }
+    for r in rows:
+        if not r["parent_id"] or r["parent_id"] not in span_map:
+            continue
+        parent = span_map[r["parent_id"]]
+        child = span_map[r["id"]]
+        # Build labels
+        parent_label = parent.get("name") or parent["kind"]
+        child_label = child.get("name") or child["kind"]
+        key = (parent["kind"], child["kind"], parent_label, child_label)
+        links[key]["count"] += 1
+    
+    nodes_set: set[str] = set()
+    flow_links: list[dict] = []
+    for (pk, ck, pl, cl), data in sorted(links.items(), key=lambda x: -x[1]["count"]):
+        src = f"{pl} ({pk})"
+        tgt = f"{cl} ({ck})"
+        nodes_set.add(src)
+        nodes_set.add(tgt)
+        flow_links.append({
+            "source": src,
+            "target": tgt,
+            "value": data["count"],
+            "source_kind": pk,
+            "target_kind": ck,
+        })
+    
+    nodes = sorted(nodes_set)
+    return {"nodes": nodes, "links": flow_links}
+
+
+# ── Model distribution (for Sankey) ───────────
+
+def get_model_sankey(project: str = "", days: int = 30) -> dict:
+    """Build LLM call chain: Agent -> Model -> Tool flows."""
+    import sqlite3, json
+    from collections import defaultdict
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+        where = "WHERE 1=1"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+        rows = db.execute(
+            f"SELECT id, trace_id, parent_id, kind, name, metadata FROM spans {where} ORDER BY trace_id, start_time",
+            params
+        ).fetchall()
+    
+    span_map = {}
+    for r in rows:
+        try:
+            md = json.loads(r["metadata"] or "{}")
+        except json.JSONDecodeError:
+            md = {}
+        span_map[r["id"]] = {
+            "id": r["id"], "trace_id": r["trace_id"],
+            "kind": r["kind"], "name": r["name"],
+            "parent_id": r["parent_id"],
+            "model": md.get("model", ""),
+            "tool_name": md.get("tool_name", ""),
+        }
+    
+    links: dict[tuple, int] = defaultdict(int)
+    for r in rows:
+        sid = r["id"]
+        if sid not in span_map:
+            continue
+        s = span_map[sid]
+        if not s["parent_id"] or s["parent_id"] not in span_map:
+            continue
+        parent = span_map[s["parent_id"]]
+        
+        # Determine source/target labels based on kind
+        if s["kind"] == "llm_call":
+            src = parent.get("name") or parent["kind"]
+            tgt = s.get("model") or s["kind"]
+        elif s["kind"] == "tool_call":
+            src = parent.get("name") or parent["kind"]
+            tgt = s.get("tool_name") or s.get("name") or s["kind"]
+        elif s["kind"] == "agent":
+            role = parent.get("agent_role", "")
+            src = role or parent.get("name") or parent["kind"]
+            tgt = s.get("name") or s["kind"]
+        else:
+            continue
+        
+        if src and tgt:
+            key = (src, tgt, parent["kind"], s["kind"])
+            links[key] += 1
+    
+    nodes_set: set[str] = set()
+    flow_links: list[dict] = []
+    for (src, tgt, sk, tk), cnt in sorted(links.items(), key=lambda x: -x[1]):
+        nodes_set.add(src)
+        nodes_set.add(tgt)
+        flow_links.append({
+            "source": src, "target": tgt,
+            "value": cnt, "source_kind": sk, "target_kind": tk,
+        })
+    
+    node_list = sorted(nodes_set)
+    return {"nodes": node_list, "links": flow_links}
 class SQLiteBackend:
     """Adapter that wraps module-level store functions as a StorageBackend.
     
@@ -1150,4 +1399,8 @@ class SQLiteBackend:
     get_agent_role_dist = staticmethod(get_agent_role_dist)
     get_duration_histogram = staticmethod(get_duration_histogram)
     get_error_trend = staticmethod(get_error_trend)
+    get_error_types = staticmethod(get_error_types)
+    get_wasteful_traces = staticmethod(get_wasteful_traces)
+    get_agent_flow = staticmethod(get_agent_flow)
+    get_model_sankey = staticmethod(get_model_sankey)
 

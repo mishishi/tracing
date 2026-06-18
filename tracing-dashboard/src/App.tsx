@@ -10,13 +10,17 @@ import { ToastProvider } from './components/ToastProvider';
 import { useEndpoints } from './hooks/useEndpoints';
 import { TraceViewer } from './components/TraceViewer';
 import { CostView } from './components/CostView';
+import { WastefulTraces } from './components/WastefulTraces';
 import { ErrorPanel } from './components/ErrorPanel';
 import { LatencyHeatmap } from './components/LatencyHeatmap';
 import { PercentileTrend } from './components/PercentileTrend';
 import { ComparisonView } from './components/ComparisonView';
+import { AgentFlow } from './components/AgentFlow';
+import { ModelSankey } from './components/ModelSankey';
 import { ToolRanking } from './components/ToolRanking';
 import { DurationHistogram } from './components/DurationHistogram';
 import { ErrorTrendChart } from './components/ErrorTrendChart';
+import { ErrorTypePieChart } from './components/ErrorTypePieChart';
 import { Overview } from './components/Overview';
 import { SearchBar } from './components/SearchBar';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
@@ -271,10 +275,14 @@ function AppInner() {
             <ToolRanking endpoint={endpoint} project={globalProject} />
             <DurationHistogram endpoint={endpoint} project={globalProject} />
             <TraceViewer endpoint={endpoint} project={globalProject} initialTraceId={sharedTraceId} highlightQuery={highlightQuery} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AgentFlow endpoint={endpoint} project={globalProject} />
+              <ModelSankey endpoint={endpoint} project={globalProject} />
+            </div>
           </div>
         )}
-        {activeTab === 'costs' && <CostView endpoint={endpoint} />}
-        {activeTab === 'errors' && <div className="space-y-6"><ErrorTrendChart endpoint={endpoint} /><ErrorPanel endpoint={endpoint} onNavigateToTrace={(traceId) => { setSharedTraceId(traceId); setActiveTab('traces'); }} /></div>}
+        {activeTab === 'costs' && <div className="space-y-6"><CostView endpoint={endpoint} /><WastefulTraces endpoint={endpoint} /></div>}
+        {activeTab === 'errors' && <div className="space-y-6"><ErrorTrendChart endpoint={endpoint} /><ErrorTypePieChart endpoint={endpoint} /><ErrorPanel endpoint={endpoint} onNavigateToTrace={(traceId) => { setSharedTraceId(traceId); setActiveTab('traces'); }} /></div>}
         {activeTab === 'compare' && <ComparisonView endpoint={endpoint} />}
       </main>
 

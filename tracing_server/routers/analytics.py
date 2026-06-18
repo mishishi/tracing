@@ -6,6 +6,10 @@ from fastapi import APIRouter, Query
 from fastapi.responses import PlainTextResponse
 
 from ..store import (
+    get_error_types,
+    get_wasteful_traces,
+    get_agent_flow,
+    get_model_sankey,
     get_costs, get_error_stats, get_latency_heatmap,
     get_percentiles, get_percentiles_trend, get_token_heatmap, get_call_trend,
     get_tool_rank, get_agent_role_dist, get_duration_histogram, get_error_trend,
@@ -110,6 +114,43 @@ async def error_trend(
     return get_error_trend(project=project, days=days)
 
 
+
+
+@router.get("/errors/by-type")
+async def error_by_type(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Error classification by type."""
+    return get_error_types(project=project, days=days)
+
+
+@router.get("/traces/wasteful")
+async def wasteful_traces(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    """Token-wasteful traces."""
+    return get_wasteful_traces(project=project, days=days, limit=limit)
+
+
+@router.get("/agent-flow")
+async def agent_flow(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Agent call chain flow."""
+    return get_agent_flow(project=project, days=days)
+
+
+@router.get("/model-sankey")
+async def model_sankey(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Model distribution Sankey data."""
+    return get_model_sankey(project=project, days=days)
 @router.get("/metrics")
 async def prometheus_metrics():
     """Prometheus-compatible metrics endpoint."""
