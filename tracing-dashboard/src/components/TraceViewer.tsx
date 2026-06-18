@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Layers, Zap, Code2, Wrench, Activity, ChevronRight,
   AlertCircle, Clock,
@@ -78,7 +78,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
     else { setExpanded(new Set<string>(selected.spans.map((s) => s.id))); setAllExpanded(true); }
   };
 
-  const loadTrace = (id: string) => {
+  const loadTrace = useCallback((id: string) => {
     setLoading(true);
     setSelectedSpanId(null);
     fetch(endpoint + '/traces/' + id)
@@ -92,7 +92,7 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
       })
       .catch((err) => console.warn('Load trace failed:', err))
       .finally(() => setLoading(false));
-  };
+  }, [endpoint]);
 
   const closeDetail = () => { setSelected(null); setSelectedSpanId(null); setCompareMode(false); };
 
@@ -195,6 +195,19 @@ export function TraceViewer({ endpoint, initialTraceId, highlightQuery = '' }: T
   useEffect(() => {
     if (initialTraceId) loadTrace(initialTraceId);
   }, [initialTraceId]);
+
+  // Auto-select latest trace when entering the tab with no prior selection
+  const autoSelectedRef = useRef(false);
+  useEffect(() => {
+    if (!selected && !initialTraceId && filteredTraces.length > 0 && !autoSelectedRef.current) {
+      autoSelectedRef.current = true;
+      loadTrace(filteredTraces[0].trace_id);
+    }
+  }, [filteredTraces, selected, initialTraceId, loadTrace]);
+  // Reset auto-select when list clears (project change, etc)
+  useEffect(() => {
+    if (filteredTraces.length === 0) autoSelectedRef.current = false;
+  }, [filteredTraces]);
 
   // Computed
   const traceTokens = useMemo(() => {
