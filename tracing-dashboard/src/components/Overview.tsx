@@ -5,6 +5,7 @@ import {
   Activity, TrendingUp, Clock, Bell, BellRing, Settings, X,
 } from 'lucide-react';
 import { SkeletonStats } from './Skeleton';
+import { TokenHeatmap } from './TokenHeatmap';
 
 interface OverviewStats {
   total_spans: number;

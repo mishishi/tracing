@@ -7,7 +7,7 @@ from fastapi.responses import PlainTextResponse
 
 from ..store import (
     get_costs, get_error_stats, get_latency_heatmap,
-    get_percentiles, get_percentiles_trend,
+    get_percentiles, get_percentiles_trend, get_token_heatmap,
 )
 from .sse import sse_queues
 
@@ -48,6 +48,15 @@ async def percentiles(
     project: str = Query(default=""),
 ):
     return get_percentiles(project=project)
+
+
+@router.get("/token-heatmap")
+async def token_heatmap(
+    project: str = Query(default=""),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Token consumption heatmap: daily token counts by kind."""
+    return get_token_heatmap(project=project, days=days)
 
 
 @router.get("/metrics")

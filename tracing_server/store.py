@@ -542,6 +542,67 @@ def get_latency_heatmap(project: str = "", days: int = 7) -> dict:
         }
 
 
+def get_token_heatmap(project: str = "", days: int = 30) -> dict:
+    """Aggregate daily token consumption by kind for calendar heatmap."""
+    import sqlite3
+    from collections import defaultdict
+    from datetime import date, timedelta
+
+    with _conn() as db:
+        db.row_factory = sqlite3.Row
+
+        where = "WHERE kind IN ('llm_call', 'tool_call', 'agent') AND start_time IS NOT NULL"
+        params: list = []
+        if project:
+            where += " AND project = ?"
+            params.append(project)
+        if days > 0:
+            where += " AND start_time >= datetime('now', ?)"
+            params.append(f'-{days} days')
+
+        rows = db.execute(
+            f"SELECT kind, DATE(start_time, 'localtime') as day, "
+            f"SUM(CAST(json_extract(metadata, '$.input_tokens') AS INTEGER)) as input_tokens, "
+            f"SUM(CAST(json_extract(metadata, '$.output_tokens') AS INTEGER)) as output_tokens, "
+            f"COUNT(*) as calls "
+            f"FROM spans {where} "
+            f"GROUP BY kind, day ORDER BY kind, day",
+            params
+        ).fetchall()
+
+        # Build per-day data
+        today = date.today()
+        day_list = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+        day_index = {d: i for i, d in enumerate(day_list)}
+
+        kinds: list[str] = []
+        kind_idx: dict[str, int] = {}
+        matrix: list[list[int]] = []
+        counts: list[list[int]] = []
+
+        for row in rows:
+            k = row["kind"]
+            d = row["day"]
+            if d not in day_index:
+                continue
+            if k not in kind_idx:
+                kind_idx[k] = len(kinds)
+                kinds.append(k)
+                matrix.append([0] * days)
+                counts.append([0] * days)
+            di = day_index[d]
+            ki = kind_idx[k]
+            total_tokens = (row["input_tokens"] or 0) + (row["output_tokens"] or 0)
+            matrix[ki][di] = total_tokens
+            counts[ki][di] = row["calls"] or 0
+
+        return {
+            "days": day_list,
+            "kinds": kinds,
+            "matrix": matrix,
+            "counts": counts,
+        }
+
 
 def init_shares_table():
     """Create shares table if not exists."""
