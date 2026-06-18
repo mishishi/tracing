@@ -34,7 +34,7 @@ export function MessageView({ content, maxHeight = 400 }: MessageViewProps) {
   }
 
   return (
-    <div className="space-y-2" style={{ maxHeight }}>
+    <div className="space-y-2" style={{ maxHeight, overflow: 'hidden' }}>
       {messages.map((msg, idx) => {
         const cfg = roleConfig[msg.role] || roleConfig.system;
         return (
