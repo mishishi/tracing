@@ -20,6 +20,35 @@ function tryParseJson(text: string): { ok: boolean; value: any } {
     return { ok: false, value: null };
   }
 }
+function tryParsePythonDict(text: string): string | null {
+  // Try to convert Python dict repr to JSON
+  try {
+    let fixed = text
+      .replace(/\bNone\b/g, 'null')
+      .replace(/\bTrue\b/g, 'true')
+      .replace(/\bFalse\b/g, 'false');
+    JSON.parse(fixed);
+    return fixed;
+  } catch {
+    // Try more aggressively with quote normalization
+  }
+  // Python dict uses single quotes; try converting to double quotes
+  try {
+    let s = text
+      .replace(/\bNone\b/g, 'null')
+      .replace(/\bTrue\b/g, 'true')
+      .replace(/\bFalse\b/g, 'false');
+    // Replace " with a placeholder, then ' with ", then restore
+    s = s.replace(/\\"/g, '\u0000DQ\u0000');
+    s = s.replace(/'/g, '"');
+    s = s.replace(/\u0000DQ\u0000/g, '\\"');
+    JSON.parse(s);
+    return s;
+  } catch {
+    return null;
+  }
+}
+
 
 function JsonNode({ value, depth = 0 }: { value: any; depth?: number }) {
   if (value === null || value === undefined) return <span className="text-gray-400 italic">null</span>;
@@ -103,6 +132,8 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
   const lineCount = content.split('\n').length;
 
   const parsed = useMemo(() => tryParseJson(content), [content]);
+  const pythonJson = useMemo(() => tryParsePythonDict(content), [content]);
+  const hasStructuredView = isJson || !!pythonJson;
   const isJson = parsed.ok;
   const looksLikeMd = !isJson && (/^#{1,4}\s/m.test(content) || /\*\*/.test(content) || /^[-*]\s/m.test(content) || /^\|.*\|/m.test(content));
 
@@ -128,7 +159,7 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               />
             </div>
           )}
-          {(isJson || looksLikeMd) && (
+          {(hasStructuredView || looksLikeMd || content.length > 20) && (
             <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800 rounded-md">
               <button
                 onClick={() => setViewMode('raw')}
@@ -137,13 +168,13 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
               >
                 原始
               </button>
-              {isJson && (
+              {hasStructuredView && (
                 <button
                   onClick={() => setViewMode('json')}
                   className={'px-1.5 py-0.5 text-[10px] font-medium rounded transition-all ' +
                     (viewMode === 'json' ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 shadow-sm' : 'text-gray-400 hover:text-gray-600')}
                 >
-                  JSON
+                  格式化
                 </button>
               )}
               {looksLikeMd && (
@@ -172,10 +203,10 @@ export function JsonBlock({ label, content, maxHeight = 160, defaultExpanded = f
           style={{ maxHeight: expanded ? 'none' : maxHeight }}
           dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
         />
-      ) : isJson && viewMode === 'json' ? (
+      ) : viewMode === 'json' && hasStructuredView ? (
         <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-x-auto overflow-y-hidden font-mono text-gray-300 transition-all"
           style={{ maxHeight: expanded ? 'none' : maxHeight }}>
-          <JsonNode value={parsed.value} />
+          <JsonNode value={isJson ? parsed.value : JSON.parse(pythonJson!)} />
         </pre>
       ) : (
         <pre className="text-[11px] p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300 transition-all"
