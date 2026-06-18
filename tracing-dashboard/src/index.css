@@ -285,3 +285,19 @@
   }
 }
 
+
+/* Thin scrollbar utility */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+.dark .thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
