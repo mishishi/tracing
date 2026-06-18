@@ -83,6 +83,7 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
     Promise.all([
       fetch(endpoint + '/stats').then(r => r.json()),
       fetch(endpoint + '/costs?days=30').then(r => r.json()),
+      fetch(endpoint + '/latency?percentile=99&minutes=60').then(r => r.json()).then(d => { if (d.p99_ms) setP99Latency(d.p99_ms); }).catch(() => {}),
       fetch(endpoint + '/errors?days=30').then(r => r.json()),
       fetch(endpoint + '/projects').then(r => r.json()),
       fetch(endpoint + '/traces?limit=10').then(r => r.json()),
@@ -127,8 +128,49 @@ export function Overview({ endpoint, onProjectSelect }: OverviewProps) {
 
   if (loading) return <SkeletonStats />;
 
+  const errorRateExceeded = errorThreshold > 0 && (stats?.error_rate ?? 0) >= errorThreshold;
+  const latencyExceeded = latencyThreshold > 0 && p99Latency >= latencyThreshold;
+
   return (
     <div className="space-y-6 fade-in">
+      {(errorRateExceeded || latencyExceeded) && (
+        <div className="space-y-2">
+          {errorRateExceeded && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 animate-fade-in">
+              <BellRing className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-xs text-red-700 dark:text-red-400">错误率 {(stats?.error_rate ?? 0)}% 超过阈值 {errorThreshold}%</p>
+            </div>
+          )}
+          {latencyExceeded && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 animate-fade-in">
+              <BellRing className="w-4 h-4 text-amber-500 shrink-0" />
+              <p className="text-xs text-amber-700 dark:text-amber-400">P99 延迟 {p99Latency}ms 超过阈值 {latencyThreshold}ms</p>
+            </div>
+          )}
+        </div>
+      )}
+      {showAlertSettings && (
+        <div className="bento animate-slide-up">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-gray-400" />
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">告警阈值</h4>
+            </div>
+            <button onClick={() => setShowAlertSettings(false)} className="p-1 text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
+          </div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className="text-xs text-gray-500">错误率%:</label>
+            <input type="number" min="0" max="100" step="0.1" value={errorThreshold || ''}
+              onChange={(e) => setErrorThreshold(Number(e.target.value))} placeholder="5"
+              className="w-20 px-2 py-1 text-xs rounded border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" />
+            <label className="text-xs text-gray-500">延迟ms:</label>
+            <input type="number" min="0" step="100" value={latencyThreshold || ''}
+              onChange={(e) => setLatencyThreshold(Number(e.target.value))} placeholder="5000"
+              className="w-20 px-2 py-1 text-xs rounded border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" />
+          </div>
+          <p className="text-[11px] text-gray-400 mt-2">0 或留空关闭，保存在浏览器本地。</p>
+        </div>
+      )}
       {/* Hero Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
