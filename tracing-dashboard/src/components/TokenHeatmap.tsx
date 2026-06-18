@@ -86,39 +86,36 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
 
   // Build calendar grid
   const firstDate = new Date(data.days[0] + 'T00:00:00');
-  const firstDayOfWeek = firstDate.getDay(); // 0=Sun
-  const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Mon=0
+  const firstDayOfWeek = firstDate.getDay();
+  const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
 
-  // Pad to start on Monday
   const paddedDays: (string | null)[] = [];
   for (let i = 0; i < startOffset; i++) paddedDays.push(null);
   for (const d of data.days) paddedDays.push(d);
 
-  // Group into weeks (rows)
   const COL_COUNT = 7;
   const weeks: (string | null)[][] = [];
   for (let i = 0; i < paddedDays.length; i += COL_COUNT) {
     weeks.push(paddedDays.slice(i, i + COL_COUNT));
   }
 
-  // Build month label positions: which week column each month starts at
+  // Month label positions
   const monthLabels: { name: string; week: number }[] = [];
   weeks.forEach((week, wi) => {
     for (const day of week) {
       if (day) {
         const d = new Date(day + 'T00:00:00');
-        const m = d.getMonth();
-        const label = MONTH_NAMES[m];
+        const label = MONTH_NAMES[d.getMonth()];
         const last = monthLabels[monthLabels.length - 1];
         if (!last || last.name !== label) {
           monthLabels.push({ name: label, week: wi });
         }
-        break; // only check first valid day of the week
+        break;
       }
     }
   });
 
-  // Color levels (4 levels + empty, like GitHub)
+  // Color levels
   const getLevel = (tokens: number): number => {
     if (tokens === 0) return -1;
     if (maxTokens <= 1) return 3;
@@ -133,12 +130,16 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
     ? { '-1': 'transparent', '0': 'rgba(99,102,241,0.15)', '1': 'rgba(99,102,241,0.3)', '2': 'rgba(99,102,241,0.55)', '3': 'rgba(129,140,248,0.8)' }
     : { '-1': 'transparent', '0': '#ebedf0', '1': '#c7d2fe', '2': '#818cf8', '3': '#4f46e5' };
 
-  // Available years (from first data year to current)
+  // Year options
   const firstDataYear = new Date(data.days[0] + 'T00:00:00').getFullYear();
   const yearOptions = [];
   for (let y = currentYear; y >= firstDataYear; y--) {
     yearOptions.push({ value: String(y), label: String(y) + '年' });
   }
+
+  const CELL = 12;
+  const GAP = 2;
+  const ROW_HEIGHT = CELL + GAP;
 
   return (
     <div className="space-y-4">
@@ -157,8 +158,8 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
         />
       </div>
 
-      <div className="bento py-3" style={{ height: 256, display: 'flex', flexDirection: 'column' }}>
-        <div className="overflow-x-auto flex-1">
+      <div className="bento py-3 px-2 flex flex-col" style={{ height: 256 }}>
+        <div className="flex-1 overflow-x-auto">
           {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: 28 }}>
             {monthLabels.map((m, i) => {
@@ -178,12 +179,12 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
 
           <div className="flex">
             {/* Weekday labels */}
-            <div className="flex flex-col shrink-0" style={{ width: 28, gap: 3 }}>
+            <div className="flex flex-col shrink-0" style={{ width: 28, gap: GAP }}>
               {WEEKDAY_LABELS.map((label, i) => (
                 <div
                   key={i}
                   className="text-[10px] text-gray-400 flex items-center justify-end pr-1.5"
-                  style={{ height: 12, lineHeight: '12px' }}
+                  style={{ height: CELL, lineHeight: CELL + 'px' }}
                 >
                   {label}
                 </div>
@@ -191,17 +192,12 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
             </div>
 
             {/* Grid */}
-            <div className="flex flex-1" style={{ gap: 2 }}>
+            <div className="flex flex-1" style={{ gap: GAP }}>
               {weeks.map((week, wi) => (
-                <div key={wi} className="flex flex-col flex-1" style={{ gap: 2 }}>
+                <div key={wi} className="flex flex-col flex-1" style={{ gap: GAP }}>
                   {week.map((day, di) => {
                     if (!day) {
-                      return (
-                        <div
-                          key={di}
-                          style={{ height: 12, width: '100%', minWidth: 10, borderRadius: 2 }}
-                        />
-                      );
+                      return <div key={di} style={{ height: CELL, borderRadius: 2 }} />;
                     }
                     const tokens = tokenMap[day] || 0;
                     const calls = callMap[day] || 0;
@@ -211,9 +207,9 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
                         key={di}
                         className="cursor-pointer transition-all hover:ring-2 hover:ring-indigo-400/50"
                         style={{
-                          height: 14,
+                          height: CELL,
                           width: '100%',
-                          minWidth: 12,
+                          minWidth: 10,
                           borderRadius: 2,
                           backgroundColor: levelColors[String(level)],
                           outline: tokens === 0 ? '1px solid rgba(128,128,128,0.15)' : 'none',
@@ -242,8 +238,8 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
               <div
                 key={level}
                 style={{
-                  width: 14,
-                  height: 14,
+                  width: CELL,
+                  height: CELL,
                   borderRadius: 2,
                   backgroundColor: levelColors[String(level)],
                   outline: level === -1 ? '1px solid rgba(128,128,128,0.15)' : 'none',
@@ -256,7 +252,6 @@ export function TokenHeatmap({ endpoint, project = '' }: TokenHeatmapProps) {
             </span>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Tooltip */}
