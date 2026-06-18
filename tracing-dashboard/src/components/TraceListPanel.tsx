@@ -204,7 +204,7 @@ export function TraceListPanel({
       {stats && (
         <div className="grid grid-cols-2 gap-2">
           <StatCard icon={<Activity className="w-4 h-4" />} label="Spans" value={String(stats.total_spans)} />
-          <StatCard icon={<Zap className="w-4 h-4" />} label="Tokens" value={String(stats.total_tokens)} />
+          <StatCard icon={<Zap className="w-4 h-4" />} label="Tokens" value={fmtTokens(stats.total_tokens)} />
         </div>
       )}
 
