@@ -22,8 +22,6 @@ import { DurationHistogram } from './components/DurationHistogram';
 import { ErrorTrendChart } from './components/ErrorTrendChart';
 import { ErrorTypePieChart } from './components/ErrorTypePieChart';
 import { Overview } from './components/Overview';
-import { SpanKindDonut } from './components/SpanKindDonut';
-import { SessionStats } from './components/SessionStats';
 import { CallTrendChart } from './components/CallTrendChart';
 import { TokenHeatmap } from './components/TokenHeatmap';
 import { SearchBar } from './components/SearchBar';
@@ -272,10 +270,6 @@ function AppInner() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <Overview endpoint={endpoint} onProjectSelect={(project: string) => { setGlobalProject(project); setActiveTab('traces'); }} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <SpanKindDonut endpoint={endpoint} project={globalProject} />
-              <SessionStats endpoint={endpoint} project={globalProject} />
-            </div>
           </div>
         )}
         {activeTab === 'traces' && (
